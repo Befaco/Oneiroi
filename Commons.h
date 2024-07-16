@@ -10,7 +10,7 @@
 //#define USE_RECORD_THRESHOLD
 #define MAX_PATCH_SETTINGS 16 // Max number of available MIDI channels
 #define PATCH_SETTINGS_NAME "oneiroi"
-#define PATCH_VERSION "v1.0-rc.1"
+#define PATCH_VERSION "v1.0"
 
 // Taken from pichenettes' stmlib.
 #define CONSTRAIN(var, min, max) \
