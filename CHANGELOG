@@ -1,0 +1,219 @@
+# Changelog
+
+## 1.0 (2024-07-01)
+
+- removed slew from oscillators' pitch when randomization is instantaneous
+- fixed secondary parameters not working correctly while randomizing
+
+## 1.0-rc.2 (2024-06-29)
+
+- randomization slew (<https://github.com/Befaco/Oneiroi/issues/90>)
+- fixed low volume level when recording in POST
+
+## 1.0-rc.1 (2024-06-27)
+
+- some CPU optimization (<https://github.com/Befaco/Oneiroi/issues/81>)
+- fixed attenuverters (<https://github.com/Befaco/Oneiroi/issues/83>)
+- fixed looper buffer's dc filter (<https://github.com/Befaco/Oneiroi/issues/88>)
+- more modulation speed range (<https://github.com/Befaco/Oneiroi/issues/84>)
+- manual saving with MOD/CV button long press (<https://github.com/Befaco/Oneiroi/issues/50>)
+- saving main parameters (<https://github.com/Befaco/Oneiroi/issues/89>)
+- fixed phase cancellation of sine waves when changing unison
+- added a threshold for minimum CV to further reduce noise
+- reduced resonator buffers size to raise available memory
+- fixed a bug with resonator's tune bipolar modulation
+
+todo:
+- after saving, return to whichever func mode we were in
+
+## 1.0-beta.5 (2024-06-22)
+
+- fixed looper's aliasing when playback was reversed (<https://github.com/Befaco/Oneiroi/issues/72>)
+- fixed resetting CV mapping (<https://github.com/Befaco/Oneiroi/issues/42>)
+- trying out a different way of filtering the looper (<https://github.com/Befaco/Oneiroi/issues/78>)
+- doing the same for the echo
+- fixed wrong loop start handling
+- fading the looper window when sync'd
+- removed looper speed quantization when sync'd
+- changed how the echo synchronizes
+
+## 1.0-beta.4 (2024-06-20)
+
+- tweaked effects' levels and dry/wet curves (<https://github.com/Befaco/Oneiroi/issues/70>)
+- fixed unison (<https://github.com/Befaco/Oneiroi/issues/71>)
+- fixed echo density when not sync'd (<https://github.com/Befaco/Oneiroi/issues/68>)
+- fixed a bug that was keeping some parameters from resetting (SHIFT + RECORD + RANDOM)
+- spreading randomization in time to avoid audio glitch
+- allowing undo/redo of parameters' reset
+- smoothed wavetable offset knob
+
+## 1.0-beta.3 (2024-06-19)
+
+- fixed clearing the looper buffer (<https://github.com/Befaco/Oneiroi/issues/69>)
+- restored some feedback for the delay (<https://github.com/Befaco/Oneiroi/issues/68>)
+- tweaked CV params' offset and multiplier so that when nothing is connected the value is 0
+- fixed comb filter CVs
+- tweaked resonator to allow for infinite feedback
+
+## 1.0-beta.2 (2024-06-18)
+
+- a liiiitle bit more feedback to the resonator (<https://github.com/Befaco/Oneiroi/issues/66>)
+- fixed stepped comb filter (<https://github.com/Befaco/Oneiroi/issues/63>)
+
+## 1.0-beta.1 (2024-06-14)
+
+- fixed random gate not working (<https://github.com/Befaco/Oneiroi/issues/62>)
+- visual detents on all "discrete" parameters (<https://github.com/Befaco/Oneiroi/issues/58>)
+- tweaked a little bit resonator's dissonance
+- tweaked a little bit the comb filter
+
+## 0.9.222 (2024-06-12)
+
+- fixed audio crash (<https://github.com/Befaco/Oneiroi/issues/38>)
+- reduced a bit the output level
+- a bit of CPU usage reduction
+
+## 0.9.221 (2024-06-07)
+
+- further reduced audio glitch when clearing the looper's buffer (<https://github.com/Befaco/Oneiroi/issues/57>)
+- reworked modulation speed (<https://github.com/Befaco/Oneiroi/issues/55>)
+
+## 0.9.220 (2024-06-03)
+
+- fixed momentary recording (<https://github.com/Befaco/Oneiroi/issues/54>)
+- fade in looper volume when re-triggering
+- changed default modulation to filter cutoff only (<https://github.com/Befaco/Oneiroi/issues/46>)
+- resetting modulation mapping now clears it instead (<https://github.com/Befaco/Oneiroi/issues/46>)
+- more safeguards in feedback paths (unfortunately not solving the audio crash)
+- fixed a problem with recording stopping while in SHIFT mode
+- fixed initializing WT buffer and dereferencing null value in LockableParam (<https://github.com/Befaco/Oneiroi/issues/53#issuecomment-2150953819>)
+
+## 0.9.219 (2024-05-30)
+
+- better handling of sync in (<https://github.com/Befaco/Oneiroi/issues/40> and <https://github.com/Befaco/Oneiroi/issues/5>)
+- fixed echo going out of range when sync'd
+- cleaned up modulation and added virtual detent to speed at 12 o'clock
+- fixed parameters without secondary function not updating when shift was selected (<https://github.com/Befaco/Oneiroi/issues/41>)
+- saving parameters only if they actually changed (<https://github.com/Befaco/Oneiroi/issues/36>)
+- tweaked echo's taps and filter
+- fixed modulation restarting when changing speed (<https://github.com/Befaco/Oneiroi/issues/49>)
+- made the random button more responsive (<https://github.com/Befaco/Oneiroi/issues/43>)
+- better resonator feedback (<https://github.com/Befaco/Oneiroi/issues/44>)
+- a little more volume to ambience
+- reworked clearing the looper buffer to avoid audio glitch
+- fading looper when playback is windowed (<https://github.com/Befaco/Oneiroi/issues/52>)
+
+## 0.9.218 (2024-04-25)
+
+- sending MIDI CCs (<https://github.com/Befaco/Oneiroi/issues/39>)
+- fixed catch-up LEDs for virtual detents that turned of when the parameter was modulated (<https://github.com/Befaco/Oneiroi/issues/37>)
+- modulation is now always processed
+
+## 0.9.217 (2024-04-18)
+
+- visual feedback for when parameters lock to certain values (<https://github.com/Befaco/Oneiroi/issues/16>)
+- blinking record button's led when in a FUNC mode while recording (<https://github.com/Befaco/Oneiroi/issues/3>)
+
+## 0.9.216 (2024-04-14)
+
+- a bit more output volume (<https://github.com/Befaco/Oneiroi/issues/28>)
+- reworked randomization (<https://github.com/Befaco/Oneiroi/issues/33>)
+- fixed ambience audio glitch when changing direction
+- calibration of pitch and looper speed center positions (<https://github.com/Befaco/Oneiroi/issues/17>)
+- fading output while saving parameters to minimize audio glitch (<https://github.com/Befaco/Oneiroi/issues/14>)
+- further mitigated audio glitch when clearing looper buffer by fading the output (<https://github.com/Befaco/Oneiroi/issues/15>)
+- reset parameters to knobs with SHIFT + RECORD + RANDOM (<https://github.com/Befaco/Oneiroi/issues/23>)
+- fixed parameters jumping to knob value after randomization if a func button is pressed (<https://github.com/Befaco/Oneiroi/issues/2>)
+- controls soft takeover or jump selection at startup (<https://github.com/Befaco/Oneiroi/issues/7>)
+- attenuators or attenuverters selection at startup (<https://github.com/Befaco/Oneiroi/issues/8>)
+
+## 0.9.215 (2024-04-10)
+
+- fixed levels (hopefully) (<https://github.com/Befaco/Oneiroi/issues/28>)
+- fixed wavetable offset and looper start boundaries (<https://github.com/Befaco/Oneiroi/issues/31>)
+
+## 0.9.214 (2024-04-07)
+
+- fixed v/oct attenuation not working (<https://github.com/Befaco/Oneiroi/issues/29>)
+- fixed handling of buttons combos (<https://github.com/Befaco/Oneiroi/issues/21>)
+- lowered both oscillators' volumes and output compression (<https://github.com/Befaco/Oneiroi/issues/28>)
+
+## 0.9.213 (2024-04-05)
+
+- fixed CV's not working and looper speed offset (<https://github.com/Befaco/Oneiroi/issues/22>)
+- fixed correctly recalling CV mappings
+
+## 0.9.212 (2024-04-04)
+
+- hopefully fixed zippering faders with sine waves (<https://github.com/Befaco/Oneiroi/issues/13>)
+- three points v/oct calibration (<https://github.com/Befaco/Oneiroi/issues/17>)
+
+## 0.9.211 (2024-04-01)
+
+- fixed MapExpo()
+- fading looper volume when stalling (<https://github.com/Befaco/Oneiroi/issues/10>)
+- fixed filter CV (was still attenuverter)
+
+## 0.9.210 (2024-03-31)
+
+- fixed randomization occurring on both high and low external trigger
+- fixed randomization occurring when exiting from mod/cv mapping if the random
+  button was pressed
+- further smoothed faders
+- better deadbands for parameters with center detent
+- better ambience auto panner
+- reactivated output compressor
+- some code cleanup
+
+## 0.9.209 (2024-03-30)
+
+- tweaked resonator's dissonance
+- reduced ambience's diffusers to 4 to lower CPU usage a bit
+- added SoftClip() to effects outs to avoid unwanted explosions
+- mitigated glitch when clearing the looper buffer (<https://github.com/Befaco/Oneiroi/issues/15>)
+
+## 0.9.208 (2024-03-29)
+
+- using Befaco's repo
+- fixed catch-up leds not always working (<https://github.com/Befaco/Oneiroi/issues/4>)
+
+## 0.9.207 (2024-03-25)
+
+- deactivated recording with threshold (to be fixed)
+
+## 0.9.206 (2024-03-24)
+
+- fixed saving and recalling parameters to/from flash
+
+## 0.9.205 (2024-03-20)
+
+- fixed randomization occurring on both button press and release
+
+## 0.9.204 (2024-03-17)
+
+- reworked the comb filter
+- fixed wto crashing when modulating offset
+- added soft limiting to the resonator output
+- added soft limiting to the looper output
+- tweaked DJ style filter high pass
+- setting mod level to 0 when the knob is at 0 (needed because of the expo
+  control)
+- improved the envelope follower modulation
+- fixed mod led that remained dimly lit when modulation level = 0
+- saved a couple of cpu points by disabling the output compressor
+- fixed random led that sometimes remained lit when an audio rate signal was
+  connected to the random input and then disconnected
+
+## 0.9.203 (2024-03-14)
+
+- fixed led buttons combos
+- fixed negative randomization when amount was max
+- README
+- some bugs in TODO
+
+## 0.9.202 (2024-03-13)
+
+- all the mod and cv levels are now simple attenuators
+- C is now in the center of the pitch knob
+- swapped mod+cv button leds (mod is now red, cv is green)
+- cleanup
