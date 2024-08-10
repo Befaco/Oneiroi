@@ -46,8 +46,30 @@ public:
     {
         clock_->Process();
         ui_->Poll();
-        oneiroi_->Process(buffer);
+        // technically can be null whilst updating sample rate
+        if (oneiroi_) {
+            oneiroi_->Process(buffer);
+        }
     }
+
+    void updateSampleRateBlockSize(float newSampleRate, int blockSize) 
+    {
+        patchState.sampleRate = newSampleRate;        
+        patchState.blockSize = blockSize;
+        patchState.blockRate = newSampleRate / blockSize;
+
+        // destroy and recreate Oneiroi
+        Oneiroi::destroy(oneiroi_);
+        oneiroi_ = Oneiroi::create(&patchCtrls, &patchCvs, &patchState);
+    }
+
+    PatchCtrls* getPatchCtrls() { return &patchCtrls; }
+    PatchCvs* getPatchCvs() { return &patchCvs; }
+    PatchState* getPatchState() { return &patchState; }
+    Oneiroi* getOneiroi() { return oneiroi_; }
+    Ui* getUi() { return ui_; }
+
+
 };
 
 #endif // __OneiroiPatch_hpp__

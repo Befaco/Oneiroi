@@ -433,4 +433,7 @@ public:
             limiter_->ProcessSoft(output, output);
         }
     }
+
+    LooperBuffer* GetBuffer() { return buffer_; }
+    WaveTableBuffer* GetWtBuffer() { return wtBuffer_; }
 };

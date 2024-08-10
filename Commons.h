@@ -59,7 +59,7 @@ constexpr float kCvLpCoeff = 0.7f;
 constexpr float kCvOffset = -0.46035f;
 constexpr float kCvMult = 1.485f;
 constexpr float kCvDelta = 0.02f;
-constexpr float kCvMinThreshold = 0.007f;
+constexpr float kCvMinThreshold = 0.f;
 
 constexpr int kRandomSlewSamples = 128;
 
@@ -492,7 +492,7 @@ inline float MapLog(float value, float aMin = 0.f, float aMax = 1.f, float bMin 
 }
 
 // Maps the value to a range by considering where the center actually is.
-inline float CenterMap(float value, float min = -1.f, float max = 1.f, float center = 0.55f)
+inline float CenterMap(float value, float min = -1.f, float max = 1.f, float center = 0.5f)
 {
     if (value < center)
     {
@@ -500,7 +500,7 @@ inline float CenterMap(float value, float min = -1.f, float max = 1.f, float cen
     }
     else
     {
-        value = Map(value, center, 0.99f, 0.0f, max);
+        value = Map(value, center, 1.f, 0.0f, max);
     }
 
     return value;

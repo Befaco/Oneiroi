@@ -116,6 +116,12 @@ public:
         delete obj;
     }
 
+    Looper* getLooper()
+    {
+        return looper_;
+    }
+
+
     inline void Process(AudioBuffer &buffer)
     {
         FloatArray left = buffer.getSamples(LEFT_CHANNEL);

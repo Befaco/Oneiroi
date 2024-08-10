@@ -50,7 +50,7 @@ struct Configuration
   uint16_t params_max[40];
 };
 
-extern PatchProcessor* getInitialisingPatchProcessor();
+// extern PatchProcessor* getInitialisingPatchProcessor();
 
 class Ui
 {
@@ -65,9 +65,11 @@ private:
     SwitchController* switches_[PARAM_SWITCH_LAST];
     RecordButtonController* recordButton_;
     RandomButtonController* randomButton_;
+public:
     ShiftButtonController* shiftButton_;
     ModCvButtonController* modCvButton_;
     Led* leds_[LED_LAST];
+private:
     MidiController* midiOuts_[PARAM_MIDI_LAST];
 
     CatchUpController* movingParam_;
@@ -84,6 +86,7 @@ private:
 
     int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_, samplesSinceModCvPressed_, samplesSinceRecordInReceived_, samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
 
+public:
     bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, startup_, undoRedo_, doRandomSlew_;
 
     int lastOctave_, randomizeTask_;
@@ -153,8 +156,8 @@ public:
         // Alt params
         patchCtrls_->looperSos = 0.f;
         patchCtrls_->looperFilter = 0.5f;
-        patchCtrls_->looperResampling = getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
-        patchCtrls_->oscUseWavetable = getInitialisingPatchProcessor()->patch->isButtonPressed(SSWT_SWITCH);
+        patchCtrls_->looperResampling = 0; //getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
+        patchCtrls_->oscUseWavetable = 0; //getInitialisingPatchProcessor()->patch->isButtonPressed(SSWT_SWITCH);
         lastOctave_ = 3;
         octave_ = 1.f / 8.f * lastOctave_;
         unison_ = 0.5f;
@@ -437,7 +440,7 @@ public:
 
     void LoadConfig()
     {
-        Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".cfg");
+        Resource* resource = nullptr; //Resource::load(PATCH_SETTINGS_NAME ".cfg");
         if (resource)
         {
             Configuration* configuration = (Configuration*)resource->getData();
@@ -455,8 +458,19 @@ public:
             patchState_->softTakeover = configuration->soft_takeover;
             patchState_->modAttenuverters = configuration->mod_attenuverters;
             patchState_->cvAttenuverters = configuration->cv_attenuverters;
+
+            Resource::destroy(resource);
         }
-        Resource::destroy(resource);
+        else {
+            patchState_->c5 = 0.5f; // Where in the range 0..1 is C5 (V/OCT CV)
+            vOctScale1_ = 120.f; // Used for pitches below C5 (V/OCT CV)
+            vOctOffset1_ = 0.f; // Used for pitches below C5 (V/OCT CV)
+            vOctScale2_ = 120.f; // Used for pitches above C5 (V/OCT CV)
+            vOctOffset2_ = 0.f; // Used for pitches above C5 (V/OCT CV)
+            patchState_->pitchZero = 0.5f; // Where in the range 0..1 of the PITCH pot is the center
+            patchState_->speedZero = 0.5f; // Where in the range 0..1 of the VARISPEED pot is the center 
+        }
+
     }
 
     void LoadAltParams()
@@ -563,6 +577,8 @@ public:
 
     void SaveParametersConfig(FuncMode funcMode)
     {
+        // not needed in VCV
+        return;
         /*
         if (!parameterChangedSinceLastSave_)
         {
@@ -767,7 +783,7 @@ public:
         float level = patchState_->inputLevel.getMean();
         if (level < 0.7f)
         {
-            leds_[LED_INPUT]->Set(Map(level, 0.f, 1.f, 0.5f, 1.f));
+            leds_[LED_INPUT]->Set(level);
             leds_[LED_INPUT_PEAK]->Off();
         }
         else
@@ -776,8 +792,8 @@ public:
             leds_[LED_INPUT_PEAK]->On();
         }
 
-        float v = Map(patchState_->modValue, -0.5f, 0.5f, 0.49f, 0.5f + patchCtrls_->modLevel * 0.5f);
-        if (v < 0.5f) v = 0;
+        float v = Map(patchState_->modValue, -0.5f, 0.5f, 0.f, 1.0f);
+        // if (v < 0.5f) v = 0;
 
         leds_[LED_MOD]->Set(v);
 
@@ -873,7 +889,7 @@ public:
         if (modCvButton_->IsPressed())
         {
             // Handle long press for saving.
-            if (samplesSinceModCvPressed_ < kSaveLimit)
+            if (samplesSinceModCvPressed_ < kSaveLimit || true)
             {
                 samplesSinceModCvPressed_++;
                 leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->On();
@@ -1216,22 +1232,22 @@ public:
     {
         for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
         {
-            knobs_[i]->Read(ParamKnob(i));
+            //knobs_[i]->Read(ParamKnob(i));
         }
 
         for (size_t i = 0; i < PARAM_FADER_LAST; i++)
         {
-            faders_[i]->Read(ParamFader(i));
+            //faders_[i]->Read(ParamFader(i));
         }
 
         for (size_t i = 0; i < PARAM_SWITCH_LAST - 1; i++)
         {
-            switches_[i]->Read(ParamSwitch(i));
+            //switches_[i]->Read(ParamSwitch(i));
         }
 
         for (size_t i = 0; i < PARAM_CV_LAST; i++)
         {
-            cvs_[i]->Read(ParamCv(i));
+            //cvs_[i]->Read(ParamCv(i));
         }
 
         for (size_t i = 0; i < LED_LAST; i++)
@@ -1241,14 +1257,14 @@ public:
 
         for (size_t i = 0; i < PARAM_MIDI_LAST; i++)
         {
-            midiOuts_[i]->Process();
+            //midiOuts_[i]->Process();
         }
 
         HandleLeds();
-        HandleCatchUp();
+        // HandleCatchUp();
         HandleLedButtons();
 
-        if (startup_)
+        if (startup_ && false)
         {
             LoadMainParams();
             LoadAltParams();
@@ -1395,12 +1411,14 @@ public:
             }
         }
 
-        if (randomize_)
+        // handled by VCV
+        if (randomize_ && false)
         {
             Randomize();
         }
 
-        if (undoRedo_)
+        // handled by VCV
+        if (undoRedo_ && false)
         {
             UndoRedo();
         }

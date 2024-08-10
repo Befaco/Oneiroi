@@ -507,9 +507,9 @@ public:
         return moving_;
     }
 
-    virtual ParamCatchUp GetCatchUpState();
-    virtual bool Process();
-    virtual void Reset();
+    virtual ParamCatchUp GetCatchUpState() = 0;
+    virtual bool Process() = 0;
+    virtual void Reset() = 0;
 };
 
 class KnobController : public CatchUpController

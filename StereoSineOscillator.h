@@ -54,7 +54,7 @@ public:
         }
 
         fadeOut_ = false;
-        fadeIn_ = false;
+        fadeIn_ = true;
         fadeVolume_ = 0;
     }
     ~StereoSineOscillator()

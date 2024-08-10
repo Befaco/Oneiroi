@@ -84,7 +84,7 @@ public:
     {
         value_ = value;
 
-        SetLed(value_);
+        // SetLed(value_);
     }
 
     inline void On()
@@ -181,5 +181,10 @@ public:
                 trig_ = true;
             }
         }
+    }
+
+    inline float Get()
+    {
+        return value_;
     }
 };
