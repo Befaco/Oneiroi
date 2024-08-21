@@ -2,7 +2,7 @@
 
 #include "Commons.h"
 
-extern PatchProcessor* getInitialisingPatchProcessor();
+// extern PatchProcessor* getInitialisingPatchProcessor();
 
 enum ParamMidi {
     PARAM_MIDI_LOOPER_SPEED,
@@ -115,7 +115,7 @@ public:
         if (abs(value_ - value) > delta_)
         {
             value_ = value;
-            getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cc(channel_, cc_, value_));
+            // getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cc(channel_, cc_, value_));
         }
     }
 };

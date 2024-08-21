@@ -6,7 +6,7 @@
 #include "Led.h"
 #include "TGate.h"
 
-extern PatchProcessor* getInitialisingPatchProcessor();
+// extern PatchProcessor* getInitialisingPatchProcessor();
 
 enum ParamKnob {
     PARAM_KNOB_LOOPER_SPEED,
@@ -666,7 +666,7 @@ public:
 
     inline void Read(ParamKnob ctrl)
     {
-        readValue_ = getInitialisingPatchProcessor()->patch->getParameterValue(paramKnobMap[ctrl]);
+        readValue_ = 0.f; // getInitialisingPatchProcessor()->patch->getParameterValue(paramKnobMap[ctrl]);
 
         if (lpCoeff_ > 0 && !first_)
         {
@@ -811,7 +811,7 @@ public:
 
     inline void Read(ParamFader fader)
     {
-        readValue_ = getInitialisingPatchProcessor()->patch->getParameterValue(paramFaderMap[fader]);
+        readValue_ = 0.f; // getInitialisingPatchProcessor()->patch->getParameterValue(paramFaderMap[fader]);
 
         if (lpCoeff_ > 0 && !first_)
         {
@@ -967,7 +967,7 @@ public:
 
     inline void Read(ParamSwitch swtch)
     {
-        float v = getInitialisingPatchProcessor()->patch->getParameterValue(paramSwitchMap[swtch]);
+        float v = 0.f; // getInitialisingPatchProcessor()->patch->getParameterValue(paramSwitchMap[swtch]);
         if (v != switchValue_)
         {
             switchValue_ = v;
@@ -1030,7 +1030,7 @@ public:
         // -5V = 0
         //  0V = 0.3
         // 10V = 0.98
-        float value = getInitialisingPatchProcessor()->patch->getParameterValue(paramCvMap[cv]);
+        float value = 0.f; // getInitialisingPatchProcessor()->patch->getParameterValue(paramCvMap[cv]);
         if (offset_ != 0)
         {
             value = value * mult_ + offset_;

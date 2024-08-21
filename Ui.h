@@ -667,21 +667,21 @@ public:
         }
 
         // Start the save process.
-        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
+        // getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
 
         // Send the file index - 0: "oneiroi.prm", 1: "oneiroi.alt", 2: "oneiroi.mod", 3: "oneiroi.cv"
-        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
+        // getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
 
         for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++)
         {
             // Convert to 14-bit signed int.
             int16_t value = rintf(values[i] * 8192);
             // Send the parameter's value.
-            getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::pb(i, value));
+            // getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::pb(i, value));
         }
 
         // Finish the process.
-        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
+        // getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
     }
 
     // Callback
