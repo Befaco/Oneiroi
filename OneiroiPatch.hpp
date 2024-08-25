@@ -65,8 +65,9 @@ public:
         Clock::destroy(clock_);
         clock_ = Clock::create(&patchCtrls, &patchState);
 
-        Ui::destroy(ui_);
-        ui_ = Ui::create(&patchCtrls, &patchCvs, &patchState);
+        // causing hard to debug memory issues, ui not strongly affected by sample rates so leave for now
+        // Ui::destroy(ui_);
+        // ui_ = Ui::create(&patchCtrls, &patchCvs, &patchState);
     }
 
     PatchCtrls* getPatchCtrls() { return &patchCtrls; }
