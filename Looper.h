@@ -51,8 +51,12 @@ private:
 
     Schmitt trigger_;
 
-    Lut<int, 32> startLUT_{0, kLooperChannelBufferLength - 1};
-    Lut<int, 128> lengthLUT_{kLooperLoopLengthMin, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO};
+    Lut<int, 32> startLUT_;
+    Lut<int, 128> lengthLUT_;
+
+    const int kLooperFadeSamples;
+    const int kLooperFadeSamplesTwice;
+    const float kLooperFadeInc;
 
     void FadeOut()
     {
@@ -218,6 +222,7 @@ private:
                 float left = HardClip(sosOut_->getSamples(LEFT_CHANNEL)[i] * patchCtrls_->looperSos + filterOut_->getSamples(LEFT_CHANNEL)[i]);
                 float right = HardClip(sosOut_->getSamples(RIGHT_CHANNEL)[i] * patchCtrls_->looperSos + filterOut_->getSamples(RIGHT_CHANNEL)[i]);
 
+                // this leads to decay even when SOS mode is 100%
                 left *= 1.f - ef_[LEFT_CHANNEL]->process(left);
                 right *= 1.f - ef_[RIGHT_CHANNEL]->process(right);
 
@@ -319,7 +324,13 @@ private:
     }
 
 public:
-    Looper(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer *wtBuffer)
+    Looper(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer *wtBuffer) :
+        // VCV change: moved LUT constructors and other constants here to be sample rate dependent
+        startLUT_ (0, kLooperChannelBufferLength - 1),
+        lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO),
+        kLooperFadeSamples(kLooperFade * patchState->sampleRate),
+        kLooperFadeSamplesTwice(kLooperFadeTwice * patchState->sampleRate),  
+        kLooperFadeInc(kLooperFadeInc_ * patchState->sampleRate)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;

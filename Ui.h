@@ -326,18 +326,18 @@ public:
         cvs_[PARAM_CV_AMBIENCE_SPACETIME] = CvController::create(&patchCvs_->ambienceSpacetime, 0.995f);
         cvs_[PARAM_CV_AMBIENCE_DECAY] = CvController::create(&patchCvs_->ambienceDecay);
 
-        leds_[LED_INPUT] = Led::create(INPUT_LED_PARAM, LedType::LED_TYPE_PARAM);
-        leds_[LED_INPUT_PEAK] = Led::create(INPUT_PEAK_LED_PARAM);
-        leds_[LED_SYNC] = Led::create(SYNC_IN);
-        leds_[LED_MOD] = Led::create(MOD_LED_PARAM, LedType::LED_TYPE_PARAM);
-        leds_[LED_RECORD] = Led::create(RECORD_BUTTON);
-        leds_[LED_RANDOM] = Led::create(RANDOM_BUTTON);
-        leds_[LED_SHIFT] = Led::create(SHIFT_BUTTON);
-        leds_[LED_MOD_AMOUNT] = Led::create(MOD_CV_RED_LED_PARAM);
-        leds_[LED_CV_AMOUNT] = Led::create(MOD_CV_GREEN_LED_PARAM);
+        leds_[LED_INPUT] = Led::create(INPUT_LED_PARAM, patchState_->sampleRate, LedType::LED_TYPE_PARAM);
+        leds_[LED_INPUT_PEAK] = Led::create(INPUT_PEAK_LED_PARAM, patchState_->sampleRate);
+        leds_[LED_SYNC] = Led::create(SYNC_IN, patchState_->sampleRate);
+        leds_[LED_MOD] = Led::create(MOD_LED_PARAM, patchState_->sampleRate, LedType::LED_TYPE_PARAM);
+        leds_[LED_RECORD] = Led::create(RECORD_BUTTON, patchState_->sampleRate);
+        leds_[LED_RANDOM] = Led::create(RANDOM_BUTTON, patchState_->sampleRate);
+        leds_[LED_SHIFT] = Led::create(SHIFT_BUTTON, patchState_->sampleRate);
+        leds_[LED_MOD_AMOUNT] = Led::create(MOD_CV_RED_LED_PARAM, patchState_->sampleRate);
+        leds_[LED_CV_AMOUNT] = Led::create(MOD_CV_GREEN_LED_PARAM, patchState_->sampleRate);
 
-        leds_[LED_ARROW_LEFT] = Led::create(LEFT_ARROW_PARAM);
-        leds_[LED_ARROW_RIGHT] = Led::create(RIGHT_ARROW_PARAM);
+        leds_[LED_ARROW_LEFT] = Led::create(LEFT_ARROW_PARAM, patchState_->sampleRate);
+        leds_[LED_ARROW_RIGHT] = Led::create(RIGHT_ARROW_PARAM, patchState_->sampleRate);
 
         midiOuts_[PARAM_MIDI_LOOPER_LENGTH] = MidiController::create(&patchCtrls_->looperLength, ParamMidi::PARAM_MIDI_LOOPER_LENGTH);
         midiOuts_[PARAM_MIDI_LOOPER_SPEED] = MidiController::create(&patchCtrls_->looperSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED);
@@ -388,8 +388,8 @@ public:
         midiOuts_[PARAM_MIDI_ECHO_DENSITY_CV] = MidiController::create(&patchCvs_->echoDensity, ParamMidi::PARAM_MIDI_ECHO_DENSITY_CV, 0, 0.5f, 0.6666667f);
         midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME_CV] = MidiController::create(&patchCvs_->ambienceSpacetime, ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
 
-        recordButton_ = RecordButtonController::create(leds_[LED_RECORD]);
-        randomButton_ = RandomButtonController::create(leds_[LED_RANDOM]);
+        recordButton_ = RecordButtonController::create(leds_[LED_RECORD], patchState_->sampleRate);
+        randomButton_ = RandomButtonController::create(leds_[LED_RANDOM], patchState_->sampleRate);
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
         modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
     }

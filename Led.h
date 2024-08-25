@@ -57,22 +57,22 @@ private:
     }
 
 public:
-    Led(int id, LedType type)
+    Led(int id, float sampleRate, LedType type)
     {
         id_ = id;
         type_ = type;
         value_ = 0;
         trig_ = false;
         doBlink_ = false;
-        trigger_.Init(48000);
+        trigger_.Init(sampleRate);
         samplesBetweenBlinks_ = 0;
     }
 
     ~Led() {}
 
-    static Led* create(int id, LedType type = LedType::LED_TYPE_BUTTON)
+    static Led* create(int id, float sampleRate, LedType type = LedType::LED_TYPE_BUTTON)
     {
-        return new Led(id, type);
+        return new Led(id, sampleRate, type);
     }
 
     static void destroy(Led* obj)

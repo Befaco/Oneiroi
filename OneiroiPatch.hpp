@@ -43,11 +43,11 @@ public:
     }
 
     void processAudio(AudioBuffer& buffer) override
-    {
-        clock_->Process();
-        ui_->Poll();
+    {        
         // technically can be null whilst updating sample rate
-        if (oneiroi_) {
+        if (oneiroi_ && clock_ && ui_) {
+            clock_->Process();
+            ui_->Poll();
             oneiroi_->Process(buffer);
         }
     }
@@ -58,9 +58,15 @@ public:
         patchState.blockSize = blockSize;
         patchState.blockRate = newSampleRate / blockSize;
 
-        // destroy and recreate Oneiroi
+        // destroy and recreate Oneiroi, clock and UI
         Oneiroi::destroy(oneiroi_);
         oneiroi_ = Oneiroi::create(&patchCtrls, &patchCvs, &patchState);
+
+        Clock::destroy(clock_);
+        clock_ = Clock::create(&patchCtrls, &patchState);
+
+        Ui::destroy(ui_);
+        ui_ = Ui::create(&patchCtrls, &patchCvs, &patchState);
     }
 
     PatchCtrls* getPatchCtrls() { return &patchCtrls; }

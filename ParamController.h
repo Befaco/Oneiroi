@@ -1074,7 +1074,7 @@ private:
     int samplesSinceHeld_;
 
 public:
-    RecordButtonController(Led* led)
+    RecordButtonController(Led* led, float sampleRate)
     {
         led_ = led;
 
@@ -1088,16 +1088,16 @@ public:
         trig_ = false;
         doBlink_ = false;
 
-        trigger_.Init(48000);
+        trigger_.Init(sampleRate);
 
         samplesSincePressed_ = 0;
         samplesSinceHeld_ = 0;
     }
     ~RecordButtonController() {}
 
-    static RecordButtonController* create(Led* led)
+    static RecordButtonController* create(Led* led, float sampleRate)
     {
-        return new RecordButtonController(led);
+        return new RecordButtonController(led, sampleRate);
     }
 
     static void destroy(RecordButtonController* obj)
@@ -1274,7 +1274,7 @@ private:
     int samplesSinceHeld_;
 
 public:
-    RandomButtonController(Led* led)
+    RandomButtonController(Led* led, float sampleRate)
     {
         led_ = led;
 
@@ -1290,16 +1290,16 @@ public:
         doBlink_ = false;
         gate_ = false;
 
-        trigger_.Init(48000);
+        trigger_.Init(sampleRate);
 
         samplesSincePressed_ = 0;
         samplesSinceHeld_ = 0;
     }
     ~RandomButtonController() {}
 
-    static RandomButtonController* create(Led* led)
+    static RandomButtonController* create(Led* led, float sampleRate)
     {
-        return new RandomButtonController(led);
+        return new RandomButtonController(led, sampleRate);
     }
 
     static void destroy(RandomButtonController* obj)

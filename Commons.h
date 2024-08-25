@@ -69,12 +69,12 @@ constexpr float kSemi4Oct = 12;
 constexpr float kOscFreqMin = 16.35f; // C0
 constexpr float kOscFreqMax = 8219.f; // C9
 
-constexpr int kLooperLoopLengthMin = 367; // Almost C3 (48000 / 130.81f)
-constexpr int kLooperFadeSamples = 480; // 10ms @ audio rate
-static const int kLooperFadeSamplesTwice = kLooperFadeSamples * 2;
+constexpr float kLooperLoopLengthMinSeconds = 1.0 / 130.813f; // C3 = 130.81Hz
+constexpr float kLooperFade = 1. / 100; // 10ms @ audio rate
+static const float kLooperFadeTwice = kLooperFade * 2;
 static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
-static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
+static const float kLooperFadeInc_ = 1.f / kLooperFade;
 constexpr float kLooperMakeupGain = 1.f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
@@ -96,8 +96,8 @@ static const int32_t kWaveTableClearBlockTypeSize = kWaveTableClearBlockSize * 4
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
 constexpr float kClockFreqMin = 0.01f;
 constexpr float kClockFreqMax = 80.f;
-constexpr int kExternalClockLimit = 3000; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
-static const float kInternalClockFreq = (48000.f / kLooperChannelBufferLength);
+constexpr float kExternalClockLimitSeconds = 2.f; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
+static const float kInternalClockFreq = (44100.f / kLooperChannelBufferLength);
 constexpr int kClockNofRatios = 17;
 constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
@@ -129,18 +129,18 @@ constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kResoInfiniteFeedbackLevel = 1.001f;
 
-constexpr int32_t kEchoMinLengthSamples = 480; // 10 ms @ audio rate
-constexpr int32_t kEchoMaxLengthSamples = 192000; // 4 seconds @ audio rate
+constexpr float kEchoMinLength = 1.f / 100.f; // 10 ms @ audio rate
+constexpr float kEchoMaxLength = 4.f; // 4 seconds @ audio rate
 constexpr int kEchoTaps = 4;
 const float kEchoTapsRatios[kEchoTaps] = { 0.75f, 0.25f, 0.375f, 1.f };  // TAP_LEFT_A (1/2 dot), TAP_LEFT_B (1/8), TAP_RIGHT_A (1/8 dot), TAP_RIGHT_B (1)
 const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
-const int32_t kEchoMaxExternalClockSamples = kEchoMaxLengthSamples / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
+const float kEchoMaxExternalClock = kEchoMaxLength / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
 constexpr float kEchoMakeupGainMin = 0.7f;
 constexpr float kEchoMakeupGainMax = 0.9f;
 
-constexpr int32_t kAmbienceBufferSize = 48000;
+constexpr int32_t kAmbienceLengthSeconds = 1.f;
 constexpr int kAmbienceNofDiffusers = 4;
 constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
@@ -402,7 +402,7 @@ float Power(float f, float n = 2, bool approx = false)
  * @param freq Frequency in Hz
  * @return float Samples
  */
-inline float F2S(float freq, float sampleRate = 48000.f)
+inline float F2S(float freq, float sampleRate)
 {
     return freq == 0.f ? 0.f : sampleRate / freq;
 }
@@ -425,7 +425,7 @@ inline float M2F(float m)
  * @param note MIDI note
  * @return float Delay time in samples
  */
-inline float M2D(float note, float sampleRate = 48000.f)
+inline float M2D(float note, float sampleRate)
 {
     return F2S(M2F(note), sampleRate);
 }

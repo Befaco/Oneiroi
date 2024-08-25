@@ -37,6 +37,8 @@ private:
     bool externalClock_;
     bool infinite_;
 
+    int32_t kEchoMinLengthSamples, kEchoMaxLengthSamples;
+
     void SetTapTime(int idx, float time)
     {
         newTapsTimes_[idx] = Clamp(time, kEchoMinLengthSamples * kEchoTapsRatios[idx], (kEchoMaxLengthSamples - 1) * kEchoTapsRatios[idx]);
@@ -152,6 +154,10 @@ public:
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
         patchState_ = patchState;
+
+        // calculated in constructor (due to variable sample rate)
+        kEchoMinLengthSamples = kEchoMinLength * patchState_->sampleRate;
+        kEchoMaxLengthSamples = kEchoMaxLength * patchState_->sampleRate;
 
         for (size_t i = 0; i < kEchoTaps; i++)
         {
