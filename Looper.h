@@ -37,7 +37,6 @@ private:
     float inputGain_, feedback_, fadeVolume_, speedVolume_;
     float filterValue_;
     float xi_;
-
     bool triggered_;
     bool boc_;
     bool cleared_;
@@ -330,7 +329,7 @@ public:
         lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO),
         kLooperFadeSamples(kLooperFade * patchState->sampleRate),
         kLooperFadeSamplesTwice(kLooperFadeTwice * patchState->sampleRate),  
-        kLooperFadeInc(kLooperFadeInc_ * patchState->sampleRate)
+        kLooperFadeInc(1.0 / kLooperFadeSamples)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;

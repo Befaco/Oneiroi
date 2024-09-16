@@ -74,7 +74,7 @@ constexpr float kLooperFade = 1. / 100; // 10ms @ audio rate
 static const float kLooperFadeTwice = kLooperFade * 2;
 static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
-static const float kLooperFadeInc_ = 1.f / kLooperFade;
+// static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
 constexpr float kLooperMakeupGain = 1.f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
@@ -284,6 +284,7 @@ struct PatchState
 
     bool modActive;
     float modValue;
+    float modValueRaw;
 
     ClockSource clockSource;
     TapTempo* tempo;

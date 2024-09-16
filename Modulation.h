@@ -195,6 +195,7 @@ public:
         }
 
         float l = MapExpo(patchCtrls_->modLevel);
-        patchState_->modValue = l > 0.02f ? lfo_->generate() * l : 0;
+        patchState_->modValueRaw = lfo_->generate();
+        patchState_->modValue = l > 0.02f ? patchState_->modValueRaw * l : 0;
     }
 };
