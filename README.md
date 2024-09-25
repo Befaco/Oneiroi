@@ -18,7 +18,7 @@ Find the latest patch from the release page:
 
 Click on "Downloads" and download the file named "patch.syx"
 
-Connect Oneiroi to your computer using any of the USBs on the back side.
+Connect Oneiroi to a standard Eurorack power supply and your computer using any USBs on the bottom.
 
 On your browser, go to the OpenWare Laboratory:
 
