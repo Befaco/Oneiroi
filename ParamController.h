@@ -406,16 +406,6 @@ public:
 
     inline void Process(float ctrlValue, bool moving)
     {
-        if (bipolar_)
-        {
-            ctrlValue = CenterMap(ctrlValue);
-            // Deadband in the center.
-            if (ctrlValue >= -0.1f && ctrlValue <= 0.1f)
-            {
-                ctrlValue = 0.f;
-            }
-        }
-
         ctrlValue_ = ctrlValue;
 
         switch (state_)

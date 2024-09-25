@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1 (2024-09-25)
+
+- Fixed modulation and CV mappings when using attenuverters (#2)
+
 ## 1.0 (2024-07-16)
 
 - First release version.

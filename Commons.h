@@ -491,7 +491,7 @@ inline float MapLog(float value, float aMin = 0.f, float aMax = 1.f, float bMin 
     return fast_expf(Map(value, aMin, aMax, bMin, bMax));
 }
 
-// Maps the value to a range by considering where the center actually is.
+// Maps the value to a range by considering where the original center actually is.
 inline float CenterMap(float value, float min = -1.f, float max = 1.f, float center = 0.55f)
 {
     if (value < center)
@@ -865,13 +865,36 @@ float Modulate(
     float cvAmount = 0,
     float cvValue = 0,
     float minValue = -1.f,
-    float maxValue = 1.f
+    float maxValue = 1.f,
+    bool modAttenuverters = false,
+    bool cvAttenuverters = false
 ) {
+    if (modAttenuverters)
+    {
+        modAmount = CenterMap(modAmount);
+        // Deadband in the center.
+        if (modAmount >= -0.1f && modAmount <= 0.1f)
+        {
+            modAmount = 0.f;
+        }
+    }
+
+    if (cvAttenuverters)
+    {
+        cvAmount = CenterMap(cvAmount);
+        // Deadband in the center.
+        if (cvAmount >= -0.1f && cvAmount <= 0.1f)
+        {
+            cvAmount = 0.f;
+        }
+    }
+
     // Reduce noise when there's nothing connected to the CV.
-    if (cvValue >= -kCvMinThreshold && cvValue <= kCvMinThreshold )
+    if (cvValue >= -kCvMinThreshold && cvValue <= kCvMinThreshold)
     {
         cvValue = kCvMinThreshold;
     }
+
     baseValue += modAmount * modValue + cvAmount * cvValue;
     CONSTRAIN(baseValue, minValue, maxValue);
 
