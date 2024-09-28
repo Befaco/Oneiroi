@@ -29,8 +29,8 @@ private:
     int echoDensityRatio_;
     float echoDensity_;
 
-    float levels_[kEchoTaps], outs_[kEchoTaps];
-    float tapsTimes_[kEchoTaps], newTapsTimes_[kEchoTaps], maxTapsTimes_[kEchoTaps];
+    float levels_[kEchoTaps] = {}, outs_[kEchoTaps] = {};
+    float tapsTimes_[kEchoTaps] = {}, newTapsTimes_[kEchoTaps] = {}, maxTapsTimes_[kEchoTaps] = {};
     float amp_, repeats_, filterValue_;
     float xi_;
 

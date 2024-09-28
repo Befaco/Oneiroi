@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    uint32_t timer_;
-    float dur_;
-    float sr_;
+    uint32_t timer_ = 0;
+    float dur_ = 0.f;
+    float sr_ = 0.f;
 };

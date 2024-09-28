@@ -80,7 +80,7 @@ public:
     }
 
 private:
-    float y_[2];
+    float y_[2] = {};
     float maxlens_, chaos_, freq_;
     int32_t phs_;
 };

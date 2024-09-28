@@ -13,8 +13,8 @@ class SuperSaw
 {
 private:
   AntialiasedRampOscillator* oscs_[7];
-  float detunes_[7];
-  float volumes_[7];
+  float detunes_[7] = {};
+  float volumes_[7] = {};
   float oldFreq_;
 
 public:

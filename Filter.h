@@ -189,14 +189,14 @@ private:
     DcBlockingFilter* dc_[2];
     EnvFollower* ef_[2];
 
-    float drive_;
-    float freq_;
-    float reso_, resoValue_;
-    float amp_;
-    float filterGain_;
-    float dryWet_;
-    float noiseLevel_;
-    float feedback_;
+    float drive_ = 0.f;
+    float freq_ = 0.f;
+    float reso_ = 0.f, resoValue_ = 0.f;
+    float amp_ = 0.f;
+    float filterGain_ = 0.f;
+    float dryWet_ = 0.f;
+    float noiseLevel_ = 0.f;
+    float feedback_ = 0.f;
 
     void SetMode(float value)
     {

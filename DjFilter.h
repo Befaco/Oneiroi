@@ -17,7 +17,7 @@ private:
     BiquadFilter* hpfs_[2];
 
     FilterType filter_ = FilterType::NO_FILTER;
-    float freq_;
+    float freq_ = 0.f;
     float lpfMix_ = 1.f;
     float hpfMix_ = 0.f;
 

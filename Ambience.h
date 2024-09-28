@@ -203,8 +203,8 @@ public:
 
 private:
     DelayLine *diffuse_[kAmbienceNofDiffusers];
-    float delayTimes_[kAmbienceNofDiffusers], newDelayTimes_[kAmbienceNofDiffusers];
-    float size_, time_, rt_, df_, fbOut_, outs_[kAmbienceNofDiffusers];
+    float delayTimes_[kAmbienceNofDiffusers] = {}, newDelayTimes_[kAmbienceNofDiffusers] = {};
+    float size_, time_, rt_, df_, fbOut_, outs_[kAmbienceNofDiffusers] = {};
     bool needsUpdate_;
     const int32_t kAmbienceBufferSize;
     const float sampleRate;

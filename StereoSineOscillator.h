@@ -15,7 +15,7 @@ private:
 
     Schmitt trigger_;
 
-    float oldFreqs_[2];
+    float oldFreqs_[2] = {};
 
     bool fadeOut_, fadeIn_;
     float fadeVolume_;

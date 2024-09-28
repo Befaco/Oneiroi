@@ -12,10 +12,10 @@ private:
 
     Schmitt trigger_;
 
-    uint32_t samplesSinceSyncIn_;
+    uint32_t samplesSinceSyncIn_ = 0;
     const uint32_t kExternalClockLimit;
     ClockSource clockSource_;
-    bool firstSyncIn_;
+    bool firstSyncIn_ = false;
 
 public:
     Clock(PatchCtrls* patchCtrls, PatchState* patchState) : kExternalClockLimit(kExternalClockLimitSeconds * patchState->blockRate)

@@ -1462,9 +1462,11 @@ public:
         led_ = led;
 
         on_ = false;
+        latched_ = false;
         hold_ = false;
         pressed_ = false;
         trig_ = false;
+        gate_ = false;
 
         samplesSincePressed_ = 0;
         samplesSinceHeld_ = 0;
@@ -1594,11 +1596,13 @@ public:
         cvLed_ = cvLed;
 
         funcMode_ = FuncMode::FUNC_MODE_NONE;
-
+        
         on_ = false;
+        latched_ = false;
         hold_ = false;
         pressed_ = false;
         trig_ = false;
+        gate_ = false;
 
         samplesSincePressed_ = 0;
         samplesSinceHeld_ = 0;

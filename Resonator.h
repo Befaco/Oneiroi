@@ -142,7 +142,7 @@ private:
     BiquadFilter *lpfs_[2];
     EnvFollower *ef_[2];
     DcBlockingFilter* dc_[2];
-    float delayTimes_[2], outs_[2];
+    float delayTimes_[2] = {}, outs_[2] = {};
 
     float sampleRate_, msr_;
     float lf_, rf_;
@@ -191,7 +191,7 @@ private:
     float range_;
     float tune_;
     float oldTuning_;
-    int ranges_[3];
+    int ranges_[3] = {};
 
     int task_;
 
