@@ -4,6 +4,7 @@
 
 - Fixed modulation and CV mappings when using attenuverters (#2)
 - Fixed looper's backwards playback (#3)
+- New crossfade for looper's loop point (#4)
 
 ## 1.0 (2024-07-16)
 
