@@ -42,9 +42,9 @@ private:
     bool boc_;
     bool cleared_;
     bool looping_;
+    bool crossFade_;
 
-    bool fadeOut_;
-    bool fadeIn_;
+    int fadeIndex_;
 
     uint32_t length_, start_, end_;
     uint32_t newLength_, newStart_, newEnd_;
@@ -53,27 +53,6 @@ private:
 
     Lut<int, 32> startLUT_{0, kLooperChannelBufferLength - 1};
     Lut<int, 128> lengthLUT_{kLooperLoopLengthMin, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO};
-
-    void FadeOut()
-    {
-        fadeVolume_ -= kLooperFadeInc;
-        if (fadeVolume_ <= 0)
-        {
-            fadeVolume_ = 0;
-            fadeOut_ = false;
-            fadeIn_ = true;
-        }
-    }
-
-    void FadeIn()
-    {
-        fadeVolume_ += kLooperFadeInc;
-        if (fadeVolume_ >= 1)
-        {
-            fadeVolume_ = 1;
-            fadeIn_ = false;
-        }
-    }
 
     void MapSpeed()
     {
@@ -201,8 +180,13 @@ private:
             phase_ = 0.0f;
             newPhase_ = 0.0f;
             triggered_ = false;
-            fadeVolume_ = 0;
-            fadeIn_ = true;
+
+            if (!crossFade_ && length_ > kLooperFadeSamples)
+            {
+                fadeIndex_ = 0;
+                fadeVolume_ = 1.f;
+                crossFade_ = true;
+            }
         }
 
         boc_ = false;
@@ -211,6 +195,11 @@ private:
 
         for (size_t i = 0; i < size; i++)
         {
+            if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
+            {
+                looping_ = true;
+            }
+
             if (patchCtrls_->looperRecording)
             {
                 filter_->Process(input.getSamples(LEFT_CHANNEL)[i], input.getSamples(RIGHT_CHANNEL)[i], filterOut_->getSamples(LEFT_CHANNEL)[i], filterOut_->getSamples(RIGHT_CHANNEL)[i]);
@@ -245,14 +234,32 @@ private:
             // for the new start point and the new phase (fade in).
             buffer_->ReadLinear(start_ + phase_, newStart_ + newPhase_, x, left, right, direction_);
 
-            x += xi_;
-            if (x >= size)
+            if (crossFade_)
             {
-                x = 0;
-            }
+                float leftTail;
+                float rightTail;
 
-            left *= fadeVolume_;
-            right *= fadeVolume_;
+                if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
+                {
+                    buffer_->ReadLinear(end_ + fadeIndex_, newEnd_ + fadeIndex_, x, leftTail, rightTail, direction_);
+                }
+                else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                {
+                    buffer_->ReadLinear(start_ - fadeIndex_, newStart_ - fadeIndex_, x, leftTail, rightTail, direction_);
+                }
+
+                left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
+                right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
+
+                fadeVolume_ -= kLooperFadeInc;
+                fadeIndex_++;
+                if (fadeIndex_ == kLooperFadeSamples)
+                {
+                    fadeIndex_ = 0;
+                    fadeVolume_ = 1.f;
+                    crossFade_ = false;
+                }
+            }
 
             sosOut_->getSamples(LEFT_CHANNEL)[i] = left;
             sosOut_->getSamples(RIGHT_CHANNEL)[i] = right;
@@ -261,18 +268,27 @@ private:
             output.getSamples(RIGHT_CHANNEL)[i] = right * speedVolume_;
 
             phase_ += speed_;
-            newPhase_ += newSpeed_;
             if (phase_ >= length_)
             {
                 phase_ -= length_;
-            }
-            if (newPhase_ >= newLength_)
-            {
-                newPhase_ -= newLength_;
+                if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                {
+                    crossFade_ = true;
+                }
             }
             if (phase_ < 0)
             {
                 phase_ += length_;
+                if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                {
+                    crossFade_ = true;
+                }
+            }
+
+            newPhase_ += newSpeed_;
+            if (newPhase_ >= newLength_)
+            {
+                newPhase_ -= newLength_;
             }
             if (newPhase_ < 0)
             {
@@ -286,28 +302,10 @@ private:
                 bufferPhase_ -= kLooperChannelBufferLength;
             }
 
-            if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
+            x += xi_;
+            if (x >= size)
             {
-                looping_ = true;
-            }
-
-            // Start fading out when reaching the end of the loop.
-            if (PlaybackDirection::PLAYBACK_STALLED != direction_ && looping_ && !fadeOut_ && length_ > kLooperFadeSamplesTwice)
-            {
-                if ((PlaybackDirection::PLAYBACK_FORWARD == direction_ && phase_ >= length_ - kLooperFadeSamples) ||
-                    (PlaybackDirection::PLAYBACK_BACKWARDS == direction_ && phase_ <= kLooperFadeSamples))
-                {
-                    fadeOut_ = true;
-                }
-            }
-
-            if (fadeOut_)
-            {
-                FadeOut();
-            }
-            else if (fadeIn_)
-            {
-                FadeIn();
+                x = 0;
             }
         }
 
@@ -347,8 +345,10 @@ public:
         end_ = newEnd_ = kLooperChannelBufferLength - 1;
         filterValue_ = 0;
         xi_ = 1.f / patchState_->blockSize;
+        fadeIndex_ = 0;
         boc_ = true;
         cleared_ = false;
+        crossFade_ = false;
         looping_ = false;
 
         for (size_t i = 0; i < 2; i++)
