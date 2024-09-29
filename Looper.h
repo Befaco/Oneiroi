@@ -295,7 +295,7 @@ private:
             if (PlaybackDirection::PLAYBACK_STALLED != direction_ && looping_ && !fadeOut_ && length_ > kLooperFadeSamplesTwice)
             {
                 if ((PlaybackDirection::PLAYBACK_FORWARD == direction_ && phase_ >= length_ - kLooperFadeSamples) ||
-                    (PlaybackDirection::PLAYBACK_BACKWARDS == direction_ && phase_ <= start_ + kLooperFadeSamples))
+                    (PlaybackDirection::PLAYBACK_BACKWARDS == direction_ && phase_ <= kLooperFadeSamples))
                 {
                     fadeOut_ = true;
                 }
