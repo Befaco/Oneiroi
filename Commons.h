@@ -870,6 +870,9 @@ float Modulate(
     bool modAttenuverters = false,
     bool cvAttenuverters = false
 ) {
+
+// VCV change: not needed as you can get knobs exactly at 0
+/*
     if (modAttenuverters)
     {
         modAmount = CenterMap(modAmount);
@@ -889,6 +892,7 @@ float Modulate(
             cvAmount = 0.f;
         }
     }
+*/
 
     // Reduce noise when there's nothing connected to the CV.
     if (cvValue >= -kCvMinThreshold && cvValue <= kCvMinThreshold)

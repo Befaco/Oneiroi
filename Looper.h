@@ -54,7 +54,6 @@ private:
     Lut<int, 128> lengthLUT_;
 
     const int kLooperFadeSamples;
-    const int kLooperFadeSamplesTwice;
     const float kLooperFadeInc;
 
     void MapSpeed()
@@ -240,9 +239,7 @@ private:
 
             if (crossFade_)
             {
-                float leftTail;
-                float rightTail;
-
+                float leftTail = 0.f, rightTail = 0.f;
                 if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
                 {
                     buffer_->ReadLinear(end_ + fadeIndex_, newEnd_ + fadeIndex_, x, leftTail, rightTail, direction_);
@@ -326,7 +323,6 @@ public:
         startLUT_ (0, kLooperChannelBufferLength - 1),
         lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO),
         kLooperFadeSamples(kLooperFade * patchState->sampleRate),
-        kLooperFadeSamplesTwice(kLooperFadeTwice * patchState->sampleRate),  
         kLooperFadeInc(1.0 / kLooperFadeSamples)
     {
         patchCtrls_ = patchCtrls;
