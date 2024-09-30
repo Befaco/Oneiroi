@@ -27,6 +27,7 @@ public:
         feedback_ = 0;
         filter_ = 0;
         detune_ = 0;
+        lf_ = rf_ = 0;
     }
     ~Pole()
     {
@@ -303,6 +304,7 @@ public:
 
         amp_ = 1.f;
         range_ = 1.f;
+        oldTuning_ = tune_ = 0;
         task_ = 0;
 
         SetDissonance(0);

@@ -15,7 +15,7 @@ private:
   AntialiasedRampOscillator* oscs_[7];
   float detunes_[7] = {};
   float volumes_[7] = {};
-  float oldFreq_;
+  float oldFreq_ = 0;
 
 public:
     SuperSaw(float sampleRate)

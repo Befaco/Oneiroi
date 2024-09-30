@@ -39,7 +39,7 @@ public:
 
         offsetQuantizer_.Init(kWaveTableNofTables, 0.25f, false);
 
-        oldOffset_ = 0;
+        oldFreq_ = oldOffset_ = 0;        
         xi_ = 1.f / patchState_->blockSize;
 
         /*

@@ -60,10 +60,12 @@ public:
     Led(int id, float sampleRate, LedType type)
     {
         id_ = id;
+        blinks_ = 0;
         type_ = type;
         value_ = 0;
         trig_ = false;
         doBlink_ = false;
+        fast_ = false;
         trigger_.Init(sampleRate);
         samplesBetweenBlinks_ = 0;
     }
