@@ -1286,11 +1286,20 @@ public:
             patchState_->oscOctaveFlag = false;
         }
 
-        float vOctAmount = (patchState_->cvAttenuverters ? patchCtrls_->oscPitchCvAmount * 2.f - 1.f : patchCtrls_->oscPitchCvAmount);
-        float note = vOctOffset1_ + patchCvs_->oscPitch * patchCtrls_->oscPitchCvAmount * vOctScale1_;
+        float vOctAmount = patchCtrls_->oscPitchCvAmount;
+        if (patchState_->cvAttenuverters)
+        {
+            vOctAmount = CenterMap(patchCtrls_->oscPitchCvAmount);
+            // Deadband in the center.
+            if (vOctAmount >= -0.1f && vOctAmount <= 0.1f)
+            {
+                vOctAmount = 0.f;
+            }
+        }
+        float note = vOctOffset1_ + patchCvs_->oscPitch * vOctAmount * vOctScale1_;
         if (patchCvs_->oscPitch >= patchState_->c5)
         {
-            note = vOctOffset2_ + patchCvs_->oscPitch * patchCtrls_->oscPitchCvAmount * vOctScale2_;
+            note = vOctOffset2_ + patchCvs_->oscPitch * vOctAmount * vOctScale2_;
         }
 
         if (note > 0 && note < 3.f)
@@ -1308,7 +1317,7 @@ public:
             noteCv_ += 0.1f * interval;
         }
         // tune_ is offset by half octave so that C is in the center.
-        note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue);
+        note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
         note = 12 * note + 12 * patchCtrls_->oscOctave;
         notePot_ += 0.1f * (note - notePot_);
         patchCtrls_->oscPitch = M2F(notePot_ + noteCv_);

@@ -495,10 +495,10 @@ public:
 
         SetPan(patchCtrls_->ambienceAutoPan);
 
-        float d = Modulate(patchCtrls_->ambienceDecay, patchCtrls_->ambienceDecayModAmount, patchState_->modValue, patchCtrls_->ambienceDecayCvAmount, patchCvs_->ambienceDecay);
+        float d = Modulate(patchCtrls_->ambienceDecay, patchCtrls_->ambienceDecayModAmount, patchState_->modValue, patchCtrls_->ambienceDecayCvAmount, patchCvs_->ambienceDecay, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetDecay(d);
 
-        float t = Modulate(patchCtrls_->ambienceSpacetime, patchCtrls_->ambienceSpacetimeModAmount, patchState_->modValue, patchCtrls_->ambienceSpacetimeCvAmount, patchCvs_->ambienceSpacetime);
+        float t = Modulate(patchCtrls_->ambienceSpacetime, patchCtrls_->ambienceSpacetimeModAmount, patchState_->modValue, patchCtrls_->ambienceSpacetimeCvAmount, patchCvs_->ambienceSpacetime, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetSpacetime(t);
 
         float r = 1.f - reverse_;

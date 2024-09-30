@@ -163,9 +163,9 @@ public:
             u *= 0.5f;
         }
 
-        float f = Modulate(patchCtrls_->oscPitch + patchCtrls_->oscPitch * u, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, kOscFreqMin, kOscFreqMax);
+        float f = Modulate(patchCtrls_->oscPitch + patchCtrls_->oscPitch * u, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, kOscFreqMin, kOscFreqMax, patchState_->modAttenuverters, patchState_->cvAttenuverters);
 
-        float d = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune);
+        float d = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetDetune(d);
 
         saws_[LEFT_CHANNEL]->Process(f, output.getSamples(LEFT_CHANNEL));
