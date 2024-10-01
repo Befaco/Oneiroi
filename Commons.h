@@ -72,13 +72,11 @@ constexpr float kOscFreqMax = 8219.f; // C9
 constexpr float kLooperLoopLengthMinSeconds = 1.0 / 130.813f; // C3 = 130.81Hz
 constexpr float kLooperFade = 1. / 100; // 10ms @ audio rate
 static const float kLooperFadeTwice = kLooperFade * 2;
-static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
-static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
+static const float kLooperTotalBufferLengthSeconds = (1 << 19) / 48000.; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
+static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengthSeconds / 2;
 // static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
 constexpr float kLooperMakeupGain = 1.f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
-static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
-static const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
 
 constexpr float kRecordOnsetLevel = 0.005f;
 constexpr float kRecordWindupLevel = 0.00001f;
@@ -97,7 +95,7 @@ static const int32_t kWaveTableClearBlockTypeSize = kWaveTableClearBlockSize * 4
 constexpr float kClockFreqMin = 0.01f;
 constexpr float kClockFreqMax = 80.f;
 constexpr float kExternalClockLimitSeconds = 2.f; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
-static const float kInternalClockFreq = (44100.f / kLooperChannelBufferLength);
+static const float kInternalClockFreq = (1.f / kLooperChannelBufferLengthSeconds);
 constexpr int kClockNofRatios = 17;
 constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};

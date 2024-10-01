@@ -17,8 +17,12 @@ private:
     ClockSource clockSource_;
     bool firstSyncIn_ = false;
 
+    const int kLooperChannelBufferLength;
+
 public:
-    Clock(PatchCtrls* patchCtrls, PatchState* patchState) : kExternalClockLimit(kExternalClockLimitSeconds * patchState->blockRate)
+    Clock(PatchCtrls* patchCtrls, PatchState* patchState) : 
+        kExternalClockLimit(kExternalClockLimitSeconds * patchState->blockRate),
+        kLooperChannelBufferLength(kLooperChannelBufferLengthSeconds * patchState->sampleRate)
     {
         patchCtrls_ = patchCtrls;
         patchState_ = patchState;

@@ -52,8 +52,12 @@ private:
 
     DcBlockingFilter* dc_[2];
 
+    const int32_t kLooperTotalBufferLength;
+    const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
+    const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
 public:
-    LooperBuffer()
+    LooperBuffer(float sampleRate) : 
+        kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds)
     {
         buffer_ = FloatArray::create(kLooperTotalBufferLength);
         buffer_.noise();
@@ -76,9 +80,9 @@ public:
         }
     }
 
-    static LooperBuffer* create()
+    static LooperBuffer* create(float sampleRate)
     {
-        return new LooperBuffer();
+        return new LooperBuffer(sampleRate);
     }
 
     static void destroy(LooperBuffer* obj)
@@ -91,8 +95,12 @@ public:
         return buffer_;
     }
 
-    inline bool Clear()
+    bool Clear()
     {
+        // VCV change
+        memset(buffer_.getData(), 0, kLooperTotalBufferLength * sizeof(float));
+        return true;
+
         if (clearBlock_ == buffer_.getData() + kLooperTotalBufferLength)
         {
             clearBlock_ =  buffer_.getData();

@@ -59,7 +59,11 @@ public:
     }
 
     bool Clear()
-    {
+    {   
+        // VCV change
+        memset(buffer_.getData(), 0, kWaveTableBufferLength * sizeof(float));
+        return true;
+
         if (clearBlock_ == buffer_.getData() + kWaveTableBufferLength)
         {
             clearBlock_ =  buffer_.getData();

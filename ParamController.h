@@ -1066,7 +1066,7 @@ private:
     const int kGateLimit, kHoldLimit;
 
 public:
-    RecordButtonController(Led* led, float sampleRate) : kGateLimit(kGateLimitSeconds * sampleRate), kHoldLimit(kHoldLimitSeconds * sampleRate)
+    RecordButtonController(Led* led, float sampleRate, float blockRate) : kGateLimit(kGateLimitSeconds * blockRate), kHoldLimit(kHoldLimitSeconds * blockRate)
     {
         led_ = led;
 
@@ -1087,9 +1087,9 @@ public:
     }
     ~RecordButtonController() {}
 
-    static RecordButtonController* create(Led* led, float sampleRate)
+    static RecordButtonController* create(Led* led, float sampleRate, float blockRate)
     {
-        return new RecordButtonController(led, sampleRate);
+        return new RecordButtonController(led, sampleRate, blockRate);
     }
 
     static void destroy(RecordButtonController* obj)
@@ -1268,7 +1268,7 @@ private:
     const int kHoldLimit;
 
 public:
-    RandomButtonController(Led* led, float sampleRate) : kHoldLimit(kHoldLimitSeconds * sampleRate)
+    RandomButtonController(Led* led, float sampleRate, float blockRate) : kHoldLimit(kHoldLimitSeconds * blockRate)
     {
         led_ = led;
 
@@ -1291,9 +1291,9 @@ public:
     }
     ~RandomButtonController() {}
 
-    static RandomButtonController* create(Led* led, float sampleRate)
+    static RandomButtonController* create(Led* led, float sampleRate, float blockRate)
     {
-        return new RandomButtonController(led, sampleRate);
+        return new RandomButtonController(led, sampleRate, blockRate);
     }
 
     static void destroy(RandomButtonController* obj)
@@ -1453,7 +1453,7 @@ private:
     const int kGateLimit;
 
 public:
-    ShiftButtonController(Led* led, float sampleRate) : kGateLimit(sampleRate * kGateLimitSeconds)
+    ShiftButtonController(Led* led, float sampleRate, float blockRate) : kGateLimit(blockRate * kGateLimitSeconds)
     {
         led_ = led;
 
@@ -1469,9 +1469,9 @@ public:
     }
     ~ShiftButtonController() {}
 
-    static ShiftButtonController* create(Led* led, float sampleRate)
+    static ShiftButtonController* create(Led* led, float sampleRate, float blockRate)
     {
-        return new ShiftButtonController(led, sampleRate);
+        return new ShiftButtonController(led, sampleRate, blockRate);
     }
 
     static void destroy(ShiftButtonController* obj)
@@ -1588,7 +1588,7 @@ private:
 
     const int kGateLimit;
 public:
-    ModCvButtonController(Led* modLed, Led* cvLed, float sampleRate) : kGateLimit(sampleRate * kGateLimitSeconds)
+    ModCvButtonController(Led* modLed, Led* cvLed, float sampleRate, float blockRate) : kGateLimit(blockRate * kGateLimitSeconds)
     {
         modLed_ = modLed;
         cvLed_ = cvLed;
@@ -1607,9 +1607,9 @@ public:
     }
     ~ModCvButtonController() {}
 
-    static ModCvButtonController* create(Led* modLed, Led* cvLed, float sampleRate)
+    static ModCvButtonController* create(Led* modLed, Led* cvLed, float sampleRate, float blockRate)
     {
-        return new ModCvButtonController(modLed, cvLed, sampleRate);
+        return new ModCvButtonController(modLed, cvLed, sampleRate, blockRate);
     }
 
     static void destroy(ModCvButtonController* obj)

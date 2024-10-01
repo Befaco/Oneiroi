@@ -50,6 +50,9 @@ private:
 
     Schmitt trigger_;
 
+    const int kLooperTotalBufferLength;
+    const int kLooperChannelBufferLength;
+
     Lut<int, 32> startLUT_;
     Lut<int, 128> lengthLUT_;
 
@@ -319,6 +322,8 @@ private:
 
 public:
     Looper(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer *wtBuffer) :
+        kLooperTotalBufferLength(kLooperTotalBufferLengthSeconds * patchState->sampleRate),
+        kLooperChannelBufferLength(kLooperChannelBufferLengthSeconds * patchState->sampleRate),
         // VCV change: moved LUT constructors and other constants here to be sample rate dependent
         startLUT_ (0, kLooperChannelBufferLength - 1),
         lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO),
@@ -329,7 +334,7 @@ public:
         patchCvs_ = patchCvs;
         patchState_ = patchState;
 
-        buffer_ = LooperBuffer::create();
+        buffer_ = LooperBuffer::create(patchState_->sampleRate);
         filter_ = DjFilter::create(patchState_->sampleRate);
         sosOut_ = AudioBuffer::create(2, patchState_->blockSize);
         filterOut_ = AudioBuffer::create(2, patchState_->blockSize);

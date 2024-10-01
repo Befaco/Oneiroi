@@ -96,7 +96,7 @@ public:
     float octave_, tune_, vOctScale1_, vOctOffset1_, vOctScale2_, vOctOffset2_, unison_, looperVol_, osc1Vol_, osc2Vol_, inputVol_, noteCv_, notePot_, randomize_, randomSlewInc_;
 
 public:
-    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) : kResetLimit(kResetLimitSeconds * patchState->sampleRate)
+    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) : kResetLimit(kResetLimitSeconds * patchState->blockRate)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
@@ -390,10 +390,10 @@ public:
         midiOuts_[PARAM_MIDI_ECHO_DENSITY_CV] = MidiController::create(&patchCvs_->echoDensity, ParamMidi::PARAM_MIDI_ECHO_DENSITY_CV, 0, 0.5f, 0.6666667f);
         midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME_CV] = MidiController::create(&patchCvs_->ambienceSpacetime, ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
 
-        recordButton_ = RecordButtonController::create(leds_[LED_RECORD], patchState_->sampleRate);
-        randomButton_ = RandomButtonController::create(leds_[LED_RANDOM], patchState_->sampleRate);
-        shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT], patchState_->sampleRate);
-        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT], patchState_->sampleRate);
+        recordButton_ = RecordButtonController::create(leds_[LED_RECORD], patchState_->sampleRate, patchState_->blockRate);
+        randomButton_ = RandomButtonController::create(leds_[LED_RANDOM], patchState_->sampleRate, patchState_->blockRate);
+        shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT], patchState_->sampleRate, patchState_->blockRate);
+        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT], patchState_->sampleRate, patchState_->blockRate);
     }
     ~Ui()
     {
