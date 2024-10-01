@@ -86,6 +86,8 @@ private:
 
     int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_, samplesSinceModCvPressed_, samplesSinceRecordInReceived_, samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
 
+    const int kResetLimit;
+
 public:
     bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, startup_, undoRedo_, doRandomSlew_;
 
@@ -94,7 +96,7 @@ public:
     float octave_, tune_, vOctScale1_, vOctOffset1_, vOctScale2_, vOctOffset2_, unison_, looperVol_, osc1Vol_, osc2Vol_, inputVol_, noteCv_, notePot_, randomize_, randomSlewInc_;
 
 public:
-    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
+    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) : kResetLimit(kResetLimitSeconds * patchState->sampleRate)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
@@ -390,8 +392,8 @@ public:
 
         recordButton_ = RecordButtonController::create(leds_[LED_RECORD], patchState_->sampleRate);
         randomButton_ = RandomButtonController::create(leds_[LED_RANDOM], patchState_->sampleRate);
-        shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
-        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
+        shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT], patchState_->sampleRate);
+        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT], patchState_->sampleRate);
     }
     ~Ui()
     {

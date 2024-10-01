@@ -159,10 +159,11 @@ constexpr float kParamCatchUpDelta = 0.005f;
 
 constexpr int kParamStartMovementLimit = 75; // Samples required to detect the start of a movement - 50ms (1500 = 1s @ block rate)
 constexpr int kParamStopMovementLimit = 225; // Samples required to detect the stop of a movement - 150ms (1500 = 1s @ block rate)
-constexpr int kResetLimit = 75; // Samples waited for both RECORD and RANDOM buttons to be pressed for resetting parameters - 50ms (1500 = 1s @ block rate)
+constexpr float kResetLimitSeconds = 0.05; // Samples waited for both RECORD and RANDOM buttons to be pressed for resetting parameters - 50ms (1500 = 1s @ block rate)
 constexpr int kSaveLimit = 3000; // Samples waited for MOD/CV button to be pressed for saving parameters - 2s (1500 = 1s @ block rate)
-constexpr int kGateLimit = 750; // Samples waited for a button gate to go off - 500ms (1500 = 1s @ block rate)
-constexpr int kHoldLimit = 75; // Samples waited for a pressed button to be considered held - 50ms (1500 = 1s @ block rate)
+constexpr float kSaveLimitSeconds = 2; // Samples waited for MOD/CV button to be pressed for saving parameters - 2s (1500 = 1s @ block rate)
+constexpr float kGateLimitSeconds = 0.5; // Samples waited for a button gate to go off - 500ms (1500 = 1s @ block rate)
+constexpr float kHoldLimitSeconds = 0.05; // Samples waited for a pressed button to be considered held - 50ms (1500 = 1s @ block rate)
 
 struct PatchCtrls
 {

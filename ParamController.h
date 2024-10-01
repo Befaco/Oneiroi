@@ -1063,8 +1063,10 @@ private:
     int samplesSincePressed_;
     int samplesSinceHeld_;
 
+    const int kGateLimit, kHoldLimit;
+
 public:
-    RecordButtonController(Led* led, float sampleRate)
+    RecordButtonController(Led* led, float sampleRate) : kGateLimit(kGateLimitSeconds * sampleRate), kHoldLimit(kHoldLimitSeconds * sampleRate)
     {
         led_ = led;
 
@@ -1263,8 +1265,10 @@ private:
     int samplesSincePressed_;
     int samplesSinceHeld_;
 
+    const int kHoldLimit;
+
 public:
-    RandomButtonController(Led* led, float sampleRate)
+    RandomButtonController(Led* led, float sampleRate) : kHoldLimit(kHoldLimitSeconds * sampleRate)
     {
         led_ = led;
 
@@ -1446,8 +1450,10 @@ private:
     int samplesSincePressed_;
     int samplesSinceHeld_;
 
+    const int kGateLimit;
+
 public:
-    ShiftButtonController(Led* led)
+    ShiftButtonController(Led* led, float sampleRate) : kGateLimit(sampleRate * kGateLimitSeconds)
     {
         led_ = led;
 
@@ -1463,9 +1469,9 @@ public:
     }
     ~ShiftButtonController() {}
 
-    static ShiftButtonController* create(Led* led)
+    static ShiftButtonController* create(Led* led, float sampleRate)
     {
-        return new ShiftButtonController(led);
+        return new ShiftButtonController(led, sampleRate);
     }
 
     static void destroy(ShiftButtonController* obj)
@@ -1579,8 +1585,10 @@ private:
 
     int samplesSincePressed_;
     int samplesSinceHeld_;
+
+    const int kGateLimit;
 public:
-    ModCvButtonController(Led* modLed, Led* cvLed)
+    ModCvButtonController(Led* modLed, Led* cvLed, float sampleRate) : kGateLimit(sampleRate * kGateLimitSeconds)
     {
         modLed_ = modLed;
         cvLed_ = cvLed;
@@ -1599,9 +1607,9 @@ public:
     }
     ~ModCvButtonController() {}
 
-    static ModCvButtonController* create(Led* modLed, Led* cvLed)
+    static ModCvButtonController* create(Led* modLed, Led* cvLed, float sampleRate)
     {
-        return new ModCvButtonController(modLed, cvLed);
+        return new ModCvButtonController(modLed, cvLed, sampleRate);
     }
 
     static void destroy(ModCvButtonController* obj)
