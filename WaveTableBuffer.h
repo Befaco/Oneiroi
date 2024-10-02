@@ -49,13 +49,15 @@ public:
         return &buffer_;
     }
 
-    void Init(FloatArray buffer)
+    void Init(FloatArray buffer, bool rescale = true)
     {
         buffer_.copyFrom(buffer.subArray(0, kWaveTableBufferLength));
 
-        // Multiply by 2 because the noise in the looper buffer is recorded at
-        // half volume.
-        buffer_.multiply(2.f);
+        if (rescale) {
+            // Multiply by 2 because the noise in the looper buffer is recorded at
+            // half volume.
+            buffer_.multiply(2.f);
+        }
     }
 
     bool Clear()
