@@ -87,8 +87,8 @@ public:
         //float p = fabsf(patchCtrls_->oscUnison);
 
         float f[2];
-        f[0] = patchCtrls_->oscPitch;
-        f[1] = patchCtrls_->oscPitch + patchCtrls_->oscPitch * u;
+        f[0] = Clamp(patchCtrls_->oscPitch, kOscFreqMin, kOscFreqMax);
+        f[1] = Clamp(patchCtrls_->oscPitch * u, kOscFreqMin, kOscFreqMax);
         ParameterInterpolator freqParams[2] = {ParameterInterpolator(&oldFreqs_[0], f[0], size), ParameterInterpolator(&oldFreqs_[1], f[1], size)};
 
         for (size_t i = 0; i < size; i++)
