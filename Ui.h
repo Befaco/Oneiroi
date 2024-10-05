@@ -102,7 +102,7 @@ public:
         patchCvs_ = patchCvs;
         patchState_ = patchState;
 
-        octaveQuantizer_.Init(8, 0.25f, false);
+        octaveQuantizer_.Init(8, 0.f, false);
 
         movingParam_ = NULL;
 
