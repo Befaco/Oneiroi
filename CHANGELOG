@@ -6,6 +6,7 @@
 - Fixed looper's backwards playback (#3)
 - New crossfade for looper's loop point (#4)
 - Fixed sine osc frequency boundaries (#6)
+- Raised looper buffer size to 7 seconds
 
 ## 1.0 (2024-07-16)
 
