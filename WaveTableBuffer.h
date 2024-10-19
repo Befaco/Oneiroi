@@ -124,6 +124,21 @@ public:
         right = right1 * ix + right2 * x;
     }
 
+    inline void WriteAt(int position, float left, float right)
+    {
+        while (position >= kWaveTableBufferLength)
+        {
+            position -= kWaveTableBufferLength;
+        }
+        while (position < 0)
+        {
+            position += kWaveTableBufferLength;
+        }
+
+        buffer_.setElement(position, left);
+        buffer_.setElement(position + 1, right);
+    }
+
     void Write(float left, float right)
     {
         float l = dc_[LEFT_CHANNEL]->process(left);
@@ -135,5 +150,19 @@ public:
         {
             writeHead_ -= kWaveTableBufferLength;
         }
+    }
+
+    inline void WriteLinear(float p, float left, float right)
+    {
+        uint32_t i = uint32_t(p);
+        float f = p - i;
+
+        i *= 2;
+
+        //WriteAt(i, left * (1.f - f));
+        //WriteAt(i + 2, left * f);
+
+        //WriteAt(i, right *  (1.f - f));
+        //WriteAt(i + 3, right * f);
     }
 };

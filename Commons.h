@@ -70,7 +70,7 @@ constexpr float kOscFreqMin = 16.35f; // C0
 constexpr float kOscFreqMax = 8219.f; // C9
 
 constexpr int kLooperLoopLengthMin = 367; // Almost C3 (48000 / 130.81f)
-constexpr int kLooperFadeSamples = 480; // 10ms @ audio rate
+constexpr int kLooperFadeSamples = 2400; // 50ms @ audio rate
 static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
 static const float kLooperFadeInc = 1.f / kLooperFadeSamples;

@@ -28,7 +28,7 @@ private:
     StereoSineOscillator* sine_;
     StereoSuperSaw* saw_;
     StereoWaveTableOscillator* wt_;
-    WaveTableBuffer* wtBuffer;
+    WaveTableBuffer* wtBuffer_;
     Filter* filter_;
     Resonator* resonator_;
     Echo* echo_;
@@ -55,12 +55,12 @@ public:
         patchCvs_ = patchCvs;
         patchState_ = patchState;
 
-        wtBuffer = WaveTableBuffer::create();
-        looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_, wtBuffer);
+        wtBuffer_ = WaveTableBuffer::create();
+        looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_, wtBuffer_);
 
         sine_ = StereoSineOscillator::create(patchCtrls_, patchCvs_, patchState_);
         saw_ = StereoSuperSaw::create(patchCtrls_, patchCvs_, patchState_);
-        wt_ = StereoWaveTableOscillator::create(patchCtrls_, patchCvs_, patchState_, wtBuffer);
+        wt_ = StereoWaveTableOscillator::create(patchCtrls_, patchCvs_, patchState_, wtBuffer_);
 
         filter_ = Filter::create(patchCtrls_, patchCvs_, patchState_);
         resonator_ = Resonator::create(patchCtrls_, patchCvs_, patchState_);
@@ -88,7 +88,7 @@ public:
         AudioBuffer::destroy(resample_);
         AudioBuffer::destroy(osc1Out_);
         AudioBuffer::destroy(osc2Out_);
-        WaveTableBuffer::destroy(wtBuffer);
+        WaveTableBuffer::destroy(wtBuffer_);
         Looper::destroy(looper_);
         StereoSineOscillator::destroy(sine_);
         StereoSuperSaw::destroy(saw_);

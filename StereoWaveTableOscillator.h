@@ -84,9 +84,19 @@ public:
         }
 
         float f = Modulate(patchCtrls_->oscPitch + patchCtrls_->oscPitch * u, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, kOscFreqMin, kOscFreqMax, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        // Avoid frequency jittering translating to jumps in the wavetable.
+        if (fabs(oldFreq_ - f) < 1.f)
+        {
+            f = oldFreq_;
+        }
         ParameterInterpolator freqParam(&oldFreq_, f, size);
 
         float o = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        // Avoid offset jittering translating to jumps in the wavetable.
+        if (fabs(oldOffset_ - o) < 0.03f)
+        {
+            o = oldOffset_;
+        }
 
         float x = 0;
 
@@ -98,8 +108,8 @@ public:
                 phase_ -= kWaveTableLength;
             }
 
-            float p1 = (offsetQuantizer_.Process(oldOffset_) * kWaveTableLength) + phase_;
-            float p2 = (offsetQuantizer_.Process(o) * kWaveTableLength) + phase_;
+            float p1 = (offsetQuantizer_.Process(oldOffset_) * kWaveTableLength) * oldOffset_ + phase_;
+            float p2 = (offsetQuantizer_.Process(o) * kWaveTableLength) * o + phase_;
             float left;
             float right;
             wtBuffer_->Read(p1, p2, x, left, right);
