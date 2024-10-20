@@ -3,6 +3,7 @@
 #include "Commons.h"
 #include "WaveTableBuffer.h"
 //#include "Compressor.h"
+#include "BiquadFilter.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <cmath>
@@ -16,6 +17,7 @@ private:
 
     WaveTableBuffer* wtBuffer_;
     //Compressor* compressors_[2];
+    BiquadFilter* filters_[2];
 
     HysteresisQuantizer offsetQuantizer_;
 
@@ -42,25 +44,28 @@ public:
         oldOffset_ = 0;
         xi_ = 1.f / patchState_->blockSize;
 
-        /*
         for (size_t i = 0; i < 2; i++)
         {
+            filters_[i] = BiquadFilter::create(patchState_->sampleRate);
+            filters_[i]->setLowShelf(2000, 1);
+        /*
             compressors_[i] = Compressor::create(patchState_->sampleRate);
             compressors_[i]->setRatio(10.f);
             compressors_[i]->setAttack(1.f);
             compressors_[i]->setRelease(100.f);
             compressors_[i]->setThreshold(-20.f);
-        }
         */
+        }
     }
     ~StereoWaveTableOscillator()
     {
-        /*
         for (size_t i = 0; i < 2; i++)
         {
+            BiquadFilter::destroy(filters_[i]);
+        /*
             Compressor::destroy(compressors_[i]);
-        }
         */
+        }
     }
 
     static StereoWaveTableOscillator* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer* wtBuffer)
@@ -91,14 +96,8 @@ public:
         }
         ParameterInterpolator freqParam(&oldFreq_, f, size);
 
-        float o = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        // Avoid offset jittering translating to jumps in the wavetable.
-        if (fabs(oldOffset_ - o) < 0.03f)
-        {
-            o = oldOffset_;
-        }
-
-        float x = 0;
+        float o = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune, 0, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        ParameterInterpolator offsetParam(&oldOffset_, o, size);
 
         for (size_t i = 0; i < size; i++)
         {
@@ -108,17 +107,17 @@ public:
                 phase_ -= kWaveTableLength;
             }
 
-            float p1 = (offsetQuantizer_.Process(oldOffset_) * kWaveTableLength) * oldOffset_ + phase_;
-            float p2 = (offsetQuantizer_.Process(o) * kWaveTableLength) * o + phase_;
+            float p = offsetParam.Next();
+            int q = offsetQuantizer_.Process(p);
+            float p1 = q * kWaveTableStepLength + phase_;
+            float p2 = p1 + kWaveTableStepLength;
+            float x = (p - kWaveTableNofTablesR * q) / kWaveTableNofTablesR;
             float left;
             float right;
-            wtBuffer_->Read(p1, p2, x, left, right);
+            wtBuffer_->ReadLinear(p1, p2, x, left, right);
 
-            x += xi_;
-            if (x >= size)
-            {
-                x = 0;
-            }
+            left = filters_[LEFT_CHANNEL]->process(left);
+            right = filters_[RIGHT_CHANNEL]->process(right);
 
             //left = compressors_[LEFT_CHANNEL]->process(left);
             //right = compressors_[RIGHT_CHANNEL]->process(right);
@@ -126,7 +125,5 @@ public:
             output.getSamples(LEFT_CHANNEL)[i] = left * patchCtrls_->osc2Vol * kOScWaveTableGain;
             output.getSamples(RIGHT_CHANNEL)[i] = right * patchCtrls_->osc2Vol * kOScWaveTableGain;
         }
-
-        oldOffset_ = o;
     }
 };

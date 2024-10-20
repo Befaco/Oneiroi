@@ -55,8 +55,8 @@ public:
         patchCvs_ = patchCvs;
         patchState_ = patchState;
 
-        wtBuffer_ = WaveTableBuffer::create();
-        looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_, wtBuffer_);
+        looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_);
+        wtBuffer_ = WaveTableBuffer::create(looper_->GetBuffer());
 
         sine_ = StereoSineOscillator::create(patchCtrls_, patchCvs_, patchState_);
         saw_ = StereoSuperSaw::create(patchCtrls_, patchCvs_, patchState_);

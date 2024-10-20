@@ -19,7 +19,6 @@ private:
     PatchCtrls* patchCtrls_;
     PatchCvs* patchCvs_;
     PatchState* patchState_;
-    WaveTableBuffer *wtBuffer_;
     LooperBuffer* buffer_;
     DjFilter* filter_;
     Limiter* limiter_;
@@ -44,14 +43,14 @@ private:
     bool looping_;
     bool crossFade_;
 
-    int fadeIndex_;
+    int fadeIndex_, newFadeIndex_;
 
     uint32_t length_, start_, end_;
     uint32_t newLength_, newStart_, newEnd_;
 
     Schmitt trigger_;
 
-    Lut<int, 32> startLUT_{0, kLooperChannelBufferLength - 1};
+    Lut<int, 64> startLUT_{0, kLooperChannelBufferLength - 1};
     Lut<int, 128> lengthLUT_{kLooperLoopLengthMin, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO};
 
     void MapSpeed()
@@ -184,6 +183,7 @@ private:
             if (!crossFade_ && length_ > kLooperFadeSamples)
             {
                 fadeIndex_ = 0;
+                newFadeIndex_ = 0;
                 fadeVolume_ = 1.f;
                 crossFade_ = true;
             }
@@ -222,42 +222,83 @@ private:
                 {
                     wPhase_ -= kLooperChannelBufferLength;
                 }
-
-                wtBuffer_->Write(left, right);
             }
 
-            float left;
-            float right;
+            float left = 0;
+            float right = 0;
 
-            // While processing the block, cross-fade the read values of the
-            // current position (fade out) and the new position - that accounts
-            // for the new start point and the new phase (fade in).
-            buffer_->ReadLinear(start_ + phase_, newStart_ + newPhase_, x, left, right, direction_);
-
-            if (crossFade_)
+            if (direction_ != PlaybackDirection::PLAYBACK_STALLED)
             {
-                float leftTail;
-                float rightTail;
+                // While processing the block, cross-fade the read values of the
+                // current position (fade out) and the new position - that accounts
+                // for the new start point and the new phase (fade in).
+                buffer_->ReadLinear(start_ + phase_, newStart_ + newPhase_, x, left, right, direction_);
 
-                if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
+                if (crossFade_)
                 {
-                    buffer_->ReadLinear(end_ + fadeIndex_, newEnd_ + fadeIndex_, x, leftTail, rightTail, direction_);
+                    float leftTail;
+                    float rightTail;
+
+                    if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
+                    {
+                        buffer_->ReadLinear(end_ + fadeIndex_, newEnd_ + newFadeIndex_, x, leftTail, rightTail, direction_);
+                    }
+                    else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                    {
+                        buffer_->ReadLinear(start_ - fadeIndex_, newStart_ - newFadeIndex_, x, leftTail, rightTail, direction_);
+                    }
+
+                    left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
+                    right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
+
+                    fadeIndex_ += fabs(speed_);
+                    fadeVolume_ = fadeIndex_ / kLooperFadeSamples;
+                    if (fadeIndex_ >= kLooperFadeSamples)
+                    {
+                        fadeIndex_ = 0;
+                        fadeVolume_ = 1.f;
+                        crossFade_ = false;
+                    }
+
+                    newFadeIndex_ += fabs(newSpeed_);
+                    if (newFadeIndex_ >= kLooperFadeSamples)
+                    {
+                        newFadeIndex_ = 0;
+                    }
                 }
-                else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                
+                phase_ += speed_;
+                if (phase_ >= length_)
                 {
-                    buffer_->ReadLinear(start_ - fadeIndex_, newStart_ - fadeIndex_, x, leftTail, rightTail, direction_);
+                    phase_ -= length_;
+                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                    {
+                        crossFade_ = true;
+                    }
+                }
+                if (phase_ < 0)
+                {
+                    phase_ += length_;
+                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                    {
+                        crossFade_ = true;
+                    }
                 }
 
-                left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
-                right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
-
-                fadeVolume_ -= kLooperFadeInc;
-                fadeIndex_++;
-                if (fadeIndex_ == kLooperFadeSamples)
+                newPhase_ += newSpeed_;
+                if (newPhase_ >= newLength_)
                 {
-                    fadeIndex_ = 0;
-                    fadeVolume_ = 1.f;
-                    crossFade_ = false;
+                    newPhase_ -= newLength_;
+                }
+                if (newPhase_ < 0)
+                {
+                    newPhase_ += newLength_;
+                }
+
+                x += xi_;
+                if (x >= size)
+                {
+                    x = 0;
                 }
             }
 
@@ -267,45 +308,11 @@ private:
             output.getSamples(LEFT_CHANNEL)[i] = left * speedVolume_;
             output.getSamples(RIGHT_CHANNEL)[i] = right * speedVolume_;
 
-            phase_ += speed_;
-            if (phase_ >= length_)
-            {
-                phase_ -= length_;
-                if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
-                {
-                    crossFade_ = true;
-                }
-            }
-            if (phase_ < 0)
-            {
-                phase_ += length_;
-                if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
-                {
-                    crossFade_ = true;
-                }
-            }
-
-            newPhase_ += newSpeed_;
-            if (newPhase_ >= newLength_)
-            {
-                newPhase_ -= newLength_;
-            }
-            if (newPhase_ < 0)
-            {
-                newPhase_ += newLength_;
-            }
-
             bufferPhase_++;
             if (bufferPhase_ >= kLooperChannelBufferLength)
             {
                 boc_ = true;
                 bufferPhase_ -= kLooperChannelBufferLength;
-            }
-
-            x += xi_;
-            if (x >= size)
-            {
-                x = 0;
             }
         }
 
@@ -314,10 +321,11 @@ private:
         start_ = newStart_;
         end_ = newEnd_;
         speed_ = newSpeed_;
+        fadeIndex_ = newFadeIndex_;
     }
 
 public:
-    Looper(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer *wtBuffer)
+    Looper(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
@@ -328,9 +336,6 @@ public:
         sosOut_ = AudioBuffer::create(2, patchState_->blockSize);
         filterOut_ = AudioBuffer::create(2, patchState_->blockSize);
         limiter_ = Limiter::create();
-
-        wtBuffer_ = wtBuffer;
-        wtBuffer_->Init(buffer_->GetBuffer());
 
         inputGain_ = 1.f;
         feedback_ = 0;
@@ -370,14 +375,19 @@ public:
         }
     }
 
-    static Looper* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState, WaveTableBuffer *wtBuffer)
+    static Looper* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
     {
-        return new Looper(patchCtrls, patchCvs, patchState, wtBuffer);
+        return new Looper(patchCtrls, patchCvs, patchState);
     }
 
     static void destroy(Looper* obj)
     {
         delete obj;
+    }
+
+    FloatArray *GetBuffer()
+    {
+        return buffer_->GetBuffer();
     }
 
     void Process(AudioBuffer &input, AudioBuffer &output)
@@ -419,9 +429,7 @@ public:
         else if (cleared_)
         {
             output.clear();
-            bool doneLooper = buffer_->Clear();
-            bool doneWt = wtBuffer_->Clear();
-            if (doneLooper && doneWt)
+            if (buffer_->Clear())
             {
                 cleared_ = false;
             }
