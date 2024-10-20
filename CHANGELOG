@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1 (2024-09-25)
+## 1.1 (2024-10-20)
 
 - Fixed modulation and CV mappings when using attenuverters (#2)
 - Fixed looper's backwards playback (#3)
