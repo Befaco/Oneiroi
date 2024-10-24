@@ -3,5 +3,4 @@ All copyright holders (i.e. contributors) listed below have agreed to dual licen
 Contributors (and therefore original copyright holders):
 
 * hirnlego - Roberto Noris 
-* Diegoterrores - Diego Terrores
 * hemmer / Ewan Hemingway
