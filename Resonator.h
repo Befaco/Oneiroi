@@ -188,7 +188,7 @@ private:
     EnvFollower *ef_[2];
 
     float amp_;
-    float dryWet_;
+    // float dryWet_;
     float range_;
     float tune_;
     float oldTuning_;

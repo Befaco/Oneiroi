@@ -490,7 +490,7 @@ protected:
 
 public:
     CatchUpController(){}
-    ~CatchUpController(){}
+    virtual ~CatchUpController(){}
 
     inline bool IsMoving()
     {

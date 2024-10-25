@@ -194,9 +194,9 @@ private:
     float reso_ = 0.f, resoValue_ = 0.f;
     float amp_ = 0.f;
     float filterGain_ = 0.f;
-    float dryWet_ = 0.f;
+    // float dryWet_ = 0.f;
     float noiseLevel_ = 0.f;
-    float feedback_ = 0.f;
+    // float feedback_ = 0.f;
 
     void SetMode(float value)
     {

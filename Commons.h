@@ -70,7 +70,7 @@ constexpr float kOscFreqMin = 16.35f; // C0
 constexpr float kOscFreqMax = 8219.f; // C9
 
 constexpr float kLooperLoopLengthMinSeconds = 1.0 / 130.813f; // C3 = 130.81Hz
-constexpr float kLooperFade = 1. / 100; // 10ms @ audio rate
+constexpr float kLooperFade = 1. / 500; // 50ms @ audio rate
 static const float kLooperFadeTwice = kLooperFade * 2;
 static const float kLooperTotalBufferLengthSeconds = (1 << 19) / 48000.; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengthSeconds / 2;
@@ -85,10 +85,7 @@ constexpr int kRecordOnsetLimit = 375; // 250ms (1500 = 1s @ block rate)
 
 constexpr int kWaveTableLength = 2048;
 constexpr int kWaveTableNofTables = 32;
-static const int kWaveTableBufferLength = kWaveTableLength * kWaveTableNofTables * 2;
-constexpr int kWaveTableClearBlocks = 128; // Number of blocks of the buffer to be cleared
-static const int32_t kWaveTableClearBlockSize = kWaveTableBufferLength / kWaveTableClearBlocks;
-static const int32_t kWaveTableClearBlockTypeSize = kWaveTableClearBlockSize * 4; // Float
+static const float kWaveTableNofTablesR = 1.f / kWaveTableNofTables;
 
 // When internally clocked, base frequency is ~0.18Hz
 // When externally clocked, min bpm is 30 (0.5Hz), max is 300 (5Hz)
