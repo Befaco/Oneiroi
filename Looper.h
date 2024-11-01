@@ -266,7 +266,7 @@ private:
                         newFadeIndex_ = 0;
                     }
                 }
-                
+
                 phase_ += speed_;
                 if (phase_ >= length_)
                 {
@@ -392,10 +392,7 @@ public:
 
     void Process(AudioBuffer &input, AudioBuffer &output)
     {
-        if (patchCtrls_->looperResampling)
-        {
-            input.multiply(kResampleGain);
-        }
+        input.multiply(kInputGain);
 
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource && (trigger_.Process(patchState_->clockReset || patchState_->clockTick)))
         {

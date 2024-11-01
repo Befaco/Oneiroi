@@ -131,7 +131,7 @@ public:
             float l;
             if (patchCtrls_->looperResampling)
             {
-                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i]));
+                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kResampleLedAtt;
             }
             else
             {
@@ -215,6 +215,7 @@ public:
         buffer.multiply(patchState_->outLevel);
 
         resample_->copyFrom(buffer);
+        resample_->multiply(kResampleGain);
     }
 };
 

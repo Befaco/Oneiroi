@@ -101,10 +101,12 @@ constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
 
-constexpr float kOScSineGain = 0.3f;
-static const float kOscSineFadeInc = 1.f / 128;
-constexpr float kOScSuperSawGain = 0.65f;
-constexpr float kOScWaveTableGain = 0.6f;
+constexpr float kInputGain = 1.65f;
+
+constexpr float kOScSineGain = 0.4f;
+static const float kOscSineFadeInc = 1.f / 2400;
+constexpr float kOScSuperSawGain = 0.45f;
+constexpr float kOScWaveTableGain = 0.45f;
 constexpr float kSourcesMakeupGain = 0.15f;
 
 constexpr float kFilterFreqMin = 10.f;
@@ -151,7 +153,9 @@ constexpr float kAmbienceMakeupGain = 1.4f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
 constexpr float kOutputMakeupGain = 5.f;
+
 constexpr float kResampleGain = 2.f;
+constexpr float kResampleLedAtt = 0.8f;
 
 constexpr float kParamCatchUpDelta = 0.005f;
 

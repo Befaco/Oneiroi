@@ -152,17 +152,17 @@ public:
 
         // Alt params
         patchCtrls_->looperSos = 0.f;
-        patchCtrls_->looperFilter = 0.5f;
+        patchCtrls_->looperFilter = 0.55f; // Center is not 0.5
         patchCtrls_->looperResampling = getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
         patchCtrls_->oscUseWavetable = getInitialisingPatchProcessor()->patch->isButtonPressed(SSWT_SWITCH);
         lastOctave_ = 3;
         octave_ = 1.f / 8.f * lastOctave_;
-        unison_ = 0.5f;
+        unison_ = 0.55f; // Center is not 0.5
         patchCtrls_->filterMode = 0.f;
         patchCtrls_->filterPosition = 0.f;
         patchCtrls_->modType = 0.f;
         patchCtrls_->resonatorDissonance = 0.f;
-        patchCtrls_->echoFilter = 0.5f;
+        patchCtrls_->echoFilter = 0.55f; // Center is not 0.5
         patchCtrls_->ambienceAutoPan = 0.f;
 
         // Modulation
@@ -315,8 +315,8 @@ public:
         cvs_[PARAM_CV_LOOPER_SPEED] = CvController::create(&patchCvs_->looperSpeed, kCvLpCoeff, kCvOffset, kCvMult, 0.005f);
         cvs_[PARAM_CV_LOOPER_START] = CvController::create(&patchCvs_->looperStart, 0.5f);
         cvs_[PARAM_CV_LOOPER_LENGTH] = CvController::create(&patchCvs_->looperLength, 0.5f);
-        cvs_[PARAM_CV_OSC_PITCH] = CvController::create(&patchCvs_->oscPitch, kCvLpCoeff, 0.f, 1.f, 0.f);
-        cvs_[PARAM_CV_OSC_DETUNE] = CvController::create(&patchCvs_->oscDetune);
+        cvs_[PARAM_CV_OSC_PITCH] = CvController::create(&patchCvs_->oscPitch, 0.995f, 0.f, 1.f, 0.f);
+        cvs_[PARAM_CV_OSC_DETUNE] = CvController::create(&patchCvs_->oscDetune, 0.5f, kCvOffset, kCvMult, 0.f);
         cvs_[PARAM_CV_FILTER_CUTOFF] = CvController::create(&patchCvs_->filterCutoff, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
         cvs_[PARAM_CV_FILTER_RESONANCE] = CvController::create(&patchCvs_->filterResonance);
         cvs_[PARAM_CV_RESONATOR_TUNE] = CvController::create(&patchCvs_->resonatorTune, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
