@@ -18,14 +18,14 @@ private:
     float oldFreqs_[2] = {};
 
     bool fadeOut_, fadeIn_;
-    float fadeVolume_;
+    float sine1Volume_, sine2Volume_;
 
     void FadeOut()
     {
-        fadeVolume_ -= kOscSineFadeInc;
-        if (fadeVolume_ <= 0)
+        sine2Volume_ -= kOscSineFadeInc;
+        if (sine2Volume_ <= 0)
         {
-            fadeVolume_ = 0;
+            sine2Volume_ = 0;
             fadeOut_ = false;
             fadeIn_ = true;
         }
@@ -33,10 +33,10 @@ private:
 
     void FadeIn()
     {
-        fadeVolume_ += kOscSineFadeInc;
-        if (fadeVolume_ >= 1)
+        sine2Volume_ += kOscSineFadeInc;
+        if (sine2Volume_ >= 0.5f)
         {
-            fadeVolume_ = 1;
+            sine2Volume_ = 0.5f;
             fadeIn_ = false;
         }
     }
@@ -54,8 +54,9 @@ public:
         }
 
         fadeOut_ = false;
-        fadeIn_ = true;
-        fadeVolume_ = 0;
+        fadeIn_ = false;
+        sine1Volume_ = 0.5f;
+        sine2Volume_ = 0.5f;
     }
     ~StereoSineOscillator()
     {
@@ -79,16 +80,19 @@ public:
     {
         size_t size = output.getSize();
 
-        float u = patchCtrls_->oscUnison;
+        float u;
         if (patchCtrls_->oscUnison < 0)
         {
-            u *= 0.5f;
+            u = Map(patchCtrls_->oscUnison, -1.f, 0.f, 0.5f, 1.f);
         }
-        //float p = fabsf(patchCtrls_->oscUnison);
+        else
+        {
+            u = Map(patchCtrls_->oscUnison, 0.f, 1.f, 1.f, 2.f);
+        }
 
         float f[2];
         f[0] = Clamp(patchCtrls_->oscPitch, kOscFreqMin, kOscFreqMax);
-        f[1] = Clamp(patchCtrls_->oscPitch * u, kOscFreqMin, kOscFreqMax);
+        f[1] = Clamp(f[0] * u, kOscFreqMin, kOscFreqMax);
         ParameterInterpolator freqParams[2] = {ParameterInterpolator(&oldFreqs_[0], f[0], size), ParameterInterpolator(&oldFreqs_[1], f[1], size)};
 
         for (size_t i = 0; i < size; i++)
@@ -112,8 +116,7 @@ public:
                 FadeIn();
             }
 
-            //float out = oscs_[0]->generate() * (1.f - p) + oscs_[1]->generate() * p;
-            float out = oscs_[0]->generate() + oscs_[1]->generate() * fadeVolume_;
+            float out = oscs_[0]->generate() * sine1Volume_ + oscs_[1]->generate() * sine2Volume_;
 
             out *= patchCtrls_->osc1Vol * kOScSineGain;
 

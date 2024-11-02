@@ -44,7 +44,7 @@ public:
         phase_ = 0;
         incR_ = kWaveTableLength / patchState_->sampleRate;
 
-        offsetQuantizer_.Init(kWaveTableNofTables, 0.25f, false);
+        offsetQuantizer_.Init(kWaveTableNofTables, 0.f, false);
 
         oldFreq_ = oldOffset_ = 0;        
         xi_ = 1.f / patchState_->blockSize;
@@ -116,7 +116,8 @@ public:
             int q = offsetQuantizer_.Process(p);
             float p1 = q * kWaveTableStepLength + phase_;
             float p2 = p1 + kWaveTableStepLength;
-            float x = (p - kWaveTableNofTablesR * q) / kWaveTableNofTablesR;
+            float x = Clamp((p - kWaveTableNofTablesR * q) / kWaveTableNofTablesR);
+
             float left;
             float right;
             wtBuffer_->ReadLinear(p1, p2, x, left, right);
