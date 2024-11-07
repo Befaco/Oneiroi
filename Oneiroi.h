@@ -43,7 +43,7 @@ private:
     AudioBuffer* osc1Out_;
     AudioBuffer* osc2Out_;
 
-    StereoDcBlockingFilter inputDcFilter_, resampleDcFilter_;
+    StereoDcBlockingFilter inputDcFilter_;
     EnvFollower* inEnvFollower_[2];
 
     FilterPosition filterPosition_, lastFilterPosition_;
@@ -131,7 +131,7 @@ public:
             float l;
             if (patchCtrls_->looperResampling)
             {
-                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kResampleLedAtt;
+                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kLooperResampleLedAtt;
             }
             else
             {
@@ -147,7 +147,6 @@ public:
 
         if (patchCtrls_->looperResampling)
         {
-            resampleDcFilter_.process(*resample_, *resample_);
             looper_->Process(*resample_, buffer);
         }
         else
@@ -215,7 +214,6 @@ public:
         buffer.multiply(patchState_->outLevel);
 
         resample_->copyFrom(buffer);
-        resample_->multiply(kResampleGain);
     }
 };
 

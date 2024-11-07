@@ -25,7 +25,6 @@ private:
     EnvFollower* ef_[2];
 
     AudioBuffer* sosOut_;
-    AudioBuffer* filterOut_;
 
     PlaybackDirection direction_;
 
@@ -42,6 +41,7 @@ private:
     bool cleared_;
     bool looping_;
     bool crossFade_;
+    bool recording_;
 
     int fadeIndex_, newFadeIndex_;
 
@@ -200,12 +200,13 @@ private:
                 looping_ = true;
             }
 
-            if (patchCtrls_->looperRecording)
+            if (recording_)
             {
-                filter_->Process(input.getSamples(LEFT_CHANNEL)[i], input.getSamples(RIGHT_CHANNEL)[i], filterOut_->getSamples(LEFT_CHANNEL)[i], filterOut_->getSamples(RIGHT_CHANNEL)[i]);
+                float left, right;
+                filter_->Process(input.getSamples(LEFT_CHANNEL)[i], input.getSamples(RIGHT_CHANNEL)[i], left, right);
 
-                float left = HardClip(sosOut_->getSamples(LEFT_CHANNEL)[i] * patchCtrls_->looperSos + filterOut_->getSamples(LEFT_CHANNEL)[i]);
-                float right = HardClip(sosOut_->getSamples(RIGHT_CHANNEL)[i] * patchCtrls_->looperSos + filterOut_->getSamples(RIGHT_CHANNEL)[i]);
+                left = HardClip(sosOut_->getSamples(LEFT_CHANNEL)[i] * patchCtrls_->looperSos + left);
+                right = HardClip(sosOut_->getSamples(RIGHT_CHANNEL)[i] * patchCtrls_->looperSos + right);
 
                 left *= 1.f - ef_[LEFT_CHANNEL]->process(left);
                 right *= 1.f - ef_[RIGHT_CHANNEL]->process(right);
@@ -215,6 +216,12 @@ private:
                 wPhase_ += speed_;
 #else
                 buffer_->Write(wPhase_, left, right);
+
+                // Stop recording only when fading out is complete.
+                if (!buffer_->IsFadingOutWrite() && !patchCtrls_->looperRecording)
+                {
+                    recording_ = false;
+                }
                 wPhase_ += 1;
 #endif
 
@@ -265,6 +272,9 @@ private:
                     {
                         newFadeIndex_ = 0;
                     }
+
+                    left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
+                    right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
                 }
 
                 phase_ += speed_;
@@ -334,7 +344,6 @@ public:
         buffer_ = LooperBuffer::create();
         filter_ = DjFilter::create(patchState_->sampleRate);
         sosOut_ = AudioBuffer::create(2, patchState_->blockSize);
-        filterOut_ = AudioBuffer::create(2, patchState_->blockSize);
         limiter_ = Limiter::create();
 
         inputGain_ = 1.f;
@@ -355,6 +364,7 @@ public:
         cleared_ = false;
         crossFade_ = false;
         looping_ = false;
+        recording_ = false;
 
         for (size_t i = 0; i < 2; i++)
         {
@@ -366,7 +376,6 @@ public:
         LooperBuffer::destroy(buffer_);
         DjFilter::destroy(filter_);
         AudioBuffer::destroy(sosOut_);
-        AudioBuffer::destroy(filterOut_);
         Limiter::destroy(limiter_);
 
         for (size_t i = 0; i < 2; i++)
@@ -392,7 +401,7 @@ public:
 
     void Process(AudioBuffer &input, AudioBuffer &output)
     {
-        input.multiply(kInputGain);
+        input.multiply(patchCtrls_->looperResampling ? kLooperResampleGain : kLooperInputGain);
 
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource && (trigger_.Process(patchState_->clockReset || patchState_->clockTick)))
         {
@@ -417,6 +426,17 @@ public:
 
         SetFilter(patchCtrls_->looperFilter);
 
+        if (patchCtrls_->looperRecording && !recording_)
+        {
+            recording_ = true;
+            buffer_->FadeInWrite();
+        }
+        else if (!patchCtrls_->looperRecording && recording_ && !buffer_->IsFadingOutWrite())
+        {
+            recording_ = false;
+            buffer_->FadeOutWrite();
+        }
+
         if (patchState_->clearLooperFlag)
         {
             output.clear();
@@ -434,7 +454,7 @@ public:
         else
         {
             WriteRead(input, output);
-            output.multiply(patchCtrls_->looperVol);
+            output.multiply(patchCtrls_->looperVol * kLooperMakeupGain);
             limiter_->ProcessSoft(output, output);
         }
     }

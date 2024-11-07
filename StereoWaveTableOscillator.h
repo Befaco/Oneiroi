@@ -117,14 +117,19 @@ public:
             float right;
             wtBuffer_->ReadLinear(p1, p2, x, left, right);
 
+            float l = patchCtrls_->osc2Vol * kOScWaveTablePreGain;
+            left = AudioClip(left, l);
+            right = AudioClip(right, l);
+
             left = filters_[LEFT_CHANNEL]->process(left);
             right = filters_[RIGHT_CHANNEL]->process(right);
 
             //left = compressors_[LEFT_CHANNEL]->process(left);
             //right = compressors_[RIGHT_CHANNEL]->process(right);
 
-            output.getSamples(LEFT_CHANNEL)[i] = left * patchCtrls_->osc2Vol * kOScWaveTableGain;
-            output.getSamples(RIGHT_CHANNEL)[i] = right * patchCtrls_->osc2Vol * kOScWaveTableGain;
+
+            output.getSamples(LEFT_CHANNEL)[i] = HardClip(left * l, kOScWaveTableGain);
+            output.getSamples(RIGHT_CHANNEL)[i] = HardClip(right * l, kOScWaveTableGain);
         }
     }
 };

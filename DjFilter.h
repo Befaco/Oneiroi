@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Commons.h"
-#include "BiquadFilter.h"
+#include "StateVariableFilter.h"
 
 class DjFilter
 {
@@ -13,8 +13,8 @@ private:
         HP,
     };
 
-    BiquadFilter* lpfs_[2];
-    BiquadFilter* hpfs_[2];
+    StateVariableFilter* lpfs_[2];
+    StateVariableFilter* hpfs_[2];
 
     FilterType filter_ = FilterType::NO_FILTER;
     float freq_;
@@ -26,12 +26,12 @@ private:
         switch (filter_)
         {
         case FilterType::LP:
-            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, FilterStage::SALLEN_KEY_Q);
-            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, FilterStage::SALLEN_KEY_Q);
+            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.5f);
+            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, 0.5f);
             break;
         case FilterType::HP:
-            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, FilterStage::SALLEN_KEY_Q);
-            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, FilterStage::SALLEN_KEY_Q);
+            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, 0.5f);
+            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, 0.5f);
             break;
 
         default:
@@ -44,8 +44,8 @@ public:
     {
         for (size_t i = 0; i < 2; i++)
         {
-            lpfs_[i] = BiquadFilter::create(sampleRate);
-            hpfs_[i] = BiquadFilter::create(sampleRate);
+            lpfs_[i] = StateVariableFilter::create(sampleRate);
+            hpfs_[i] = StateVariableFilter::create(sampleRate);
         }
 
         filter_ = FilterType::NO_FILTER;
@@ -54,8 +54,8 @@ public:
     {
         for (size_t i = 0; i < 2; i++)
         {
-            BiquadFilter::destroy(lpfs_[i]);
-            BiquadFilter::destroy(hpfs_[i]);
+            StateVariableFilter::destroy(lpfs_[i]);
+            StateVariableFilter::destroy(hpfs_[i]);
         }
     }
 
