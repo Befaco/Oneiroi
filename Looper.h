@@ -27,12 +27,14 @@ private:
 
     AudioBuffer* sosOut_;
 
-    PlaybackDirection direction_;
+    PlaybackDirection readDirection_;
+    PlaybackDirection writeDirection_;
 
     float wPhase_;
     float phase_, newPhase_;
-    float speed_, newSpeed_;
-    float speedValue_;
+    float readSpeed_, newReadSpeed_;
+    float writeSpeed_;
+    float readSpeedValue_, writeSpeedValue_;
     float inputGain_, feedback_, fadeVolume_, speedVolume_;
     float filterValue_;
     float xi_;
@@ -55,19 +57,21 @@ private:
     Lut<int, 128> startLUT_{0, kLooperChannelBufferLength - 1};
     Lut<int, 128> lengthLUT_{kLooperLoopLengthMin, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO};
 
-    void MapSpeed()
+#ifdef USE_WRITE_VARISPEED
+
+    void MapWriteSpeed()
     {
-        speedValue_ = CenterMap(patchCtrls_->looperSpeed, -2.f, 2.f, patchState_->speedZero);
+        writeSpeedValue_ = CenterMap(patchCtrls_->looperWriteSpeed, -2.f, 2.f, patchState_->speedZero);
 
         // Deadband around 0x speed.
-        if (speedValue_ >= -0.1f && speedValue_ <= 0.1f)
+        if (writeSpeedValue_ >= -0.1f && writeSpeedValue_ <= 0.1f)
         {
             patchState_->looperSpeedLockFlag = true;
         }
-        else if (speedValue_ > 0.1f)
+        else if (writeSpeedValue_ > 0.1f)
         {
             // Deadband around 1x speed.
-            if (speedValue_ >= 0.95f && speedValue_ <= 1.05f)
+            if (writeSpeedValue_ >= 0.95f && writeSpeedValue_ <= 1.05f)
             {
                 patchState_->looperSpeedLockFlag = true;
             }
@@ -79,7 +83,7 @@ private:
         else
         {
             // Deadband around -1x speed.
-            if (speedValue_ >= -1.05f && speedValue_ <= -0.95f)
+            if (writeSpeedValue_ >= -1.05f && writeSpeedValue_ <= -0.95f)
             {
                 patchState_->looperSpeedLockFlag = true;
             }
@@ -90,16 +94,74 @@ private:
         }
     }
 
-    void SetSpeed(float value)
+    void SetWriteSpeed(float value)
     {
-        /*
-        if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
+        // Deadband around 0x speed.
+        if (value >= -0.1f && value <= 0.1f)
         {
-            // Quantized to quarters of speed.
-            value = Quantize(value, 16);
+            writeDirection_ = PlaybackDirection::PLAYBACK_STALLED;
+            value = 0;
         }
-        */
+        else if (value > 0.1f)
+        {
+            writeDirection_ = PlaybackDirection::PLAYBACK_FORWARD;
+            // Deadband around 1x speed.
+            if (value >= 0.95f && value <= 1.05f)
+            {
+                value = 1.f;
+            }
+        }
+        else
+        {
+            writeDirection_ = PlaybackDirection::PLAYBACK_BACKWARDS;
+            // Deadband around -1x speed.
+            if (value >= -1.05f && value <= -0.95f)
+            {
+                value = -1.f;
+            }
+        }
 
+        writeSpeed_ = value;
+    }
+#endif
+
+    void MapReadSpeed()
+    {
+        readSpeedValue_ = CenterMap(patchCtrls_->looperReadSpeed, -2.f, 2.f, patchState_->speedZero);
+
+        // Deadband around 0x speed.
+        if (readSpeedValue_ >= -0.1f && readSpeedValue_ <= 0.1f)
+        {
+            patchState_->looperSpeedLockFlag = true;
+        }
+        else if (readSpeedValue_ > 0.1f)
+        {
+            // Deadband around 1x speed.
+            if (readSpeedValue_ >= 0.95f && readSpeedValue_ <= 1.05f)
+            {
+                patchState_->looperSpeedLockFlag = true;
+            }
+            else
+            {
+                patchState_->looperSpeedLockFlag = false;
+            }
+        }
+        else
+        {
+            // Deadband around -1x speed.
+            if (readSpeedValue_ >= -1.05f && readSpeedValue_ <= -0.95f)
+            {
+                patchState_->looperSpeedLockFlag = true;
+            }
+            else
+            {
+                patchState_->looperSpeedLockFlag = false;
+            }
+        }
+    }
+
+    void SetReadSpeed(float value)
+    {
         // Lower the volume as the speed approaches 0.
         speedVolume_ = 1.f;
         if (value >= -0.2f && value <= 0.2f)
@@ -110,12 +172,12 @@ private:
         // Deadband around 0x speed.
         if (value >= -0.1f && value <= 0.1f)
         {
-            direction_ = PlaybackDirection::PLAYBACK_STALLED;
+            readDirection_ = PlaybackDirection::PLAYBACK_STALLED;
             value = 0;
         }
         else if (value > 0.1f)
         {
-            direction_ = PlaybackDirection::PLAYBACK_FORWARD;
+            readDirection_ = PlaybackDirection::PLAYBACK_FORWARD;
             // Deadband around 1x speed.
             if (value >= 0.95f && value <= 1.05f)
             {
@@ -124,7 +186,7 @@ private:
         }
         else
         {
-            direction_ = PlaybackDirection::PLAYBACK_BACKWARDS;
+            readDirection_ = PlaybackDirection::PLAYBACK_BACKWARDS;
             // Deadband around -1x speed.
             if (value >= -1.05f && value <= -0.95f)
             {
@@ -132,7 +194,7 @@ private:
             }
         }
 
-        newSpeed_ = value;
+        newReadSpeed_ = value;
     }
 
     void SetEnd()
@@ -214,53 +276,57 @@ private:
                 right *= 1.f - ef_[RIGHT_CHANNEL]->process(right);
 
 #ifdef USE_WRITE_VARISPEED
-                buffer_->WriteLinear(wPhase_, left, right, direction_);
-                wPhase_ += speed_;
+                buffer_->WriteLinear(wPhase_, left, right, writeDirection_);
 #else
                 buffer_->Write(wPhase_, left, right);
-
+#endif
                 // Stop recording only when fading out is complete.
                 if (!buffer_->IsFadingOutWrite() && !patchCtrls_->looperRecording)
                 {
                     recording_ = false;
                 }
-                wPhase_ += 1;
-#endif
 
+                wPhase_ += writeSpeed_;
                 if (wPhase_ >= kLooperChannelBufferLength)
                 {
                     wPhase_ -= kLooperChannelBufferLength;
                 }
+#ifdef USE_WRITE_VARISPEED
+                if (wPhase_ < 0)
+                {
+                    wPhase_ += kLooperChannelBufferLength;
+                }
+#endif
             }
 
             float left = 0;
             float right = 0;
 
-            if (direction_ != PlaybackDirection::PLAYBACK_STALLED)
+            if (readDirection_ != PlaybackDirection::PLAYBACK_STALLED)
             {
                 // While processing the block, cross-fade the read values of the
                 // current position (fade out) and the new position - that accounts
                 // for the new start point and the new phase (fade in).
-                buffer_->ReadLinear(start_ + phase_, newStart_ + newPhase_, x, left, right, direction_);
+                buffer_->ReadLinear(start_ + phase_, newStart_ + newPhase_, x, left, right, readDirection_);
 
                 if (crossFade_)
                 {
                     float leftTail;
                     float rightTail;
 
-                    if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
+                    if (PlaybackDirection::PLAYBACK_FORWARD == readDirection_)
                     {
-                        buffer_->ReadLinear(end_ + loopFadePhase_, newEnd_ + newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        buffer_->ReadLinear(end_ + loopFadePhase_, newEnd_ + newLoopFadePhase_, x, leftTail, rightTail, readDirection_);
                     }
-                    else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                    else if (PlaybackDirection::PLAYBACK_BACKWARDS == readDirection_)
                     {
-                        buffer_->ReadLinear(start_ + kLooperFadeSamples - loopFadePhase_, newStart_ + kLooperFadeSamples - newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        buffer_->ReadLinear(start_ + kLooperFadeSamples - loopFadePhase_, newStart_ + kLooperFadeSamples - newLoopFadePhase_, x, leftTail, rightTail, readDirection_);
                     }
 
                     left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
                     right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
 
-                    loopFadePhase_ += fabs(speed_);
+                    loopFadePhase_ += fabs(readSpeed_);
                     fadeVolume_ = loopFadePhase_ * kLooperFadeSamplesR;
                     if (loopFadePhase_ >= kLooperFadeSamples)
                     {
@@ -269,7 +335,7 @@ private:
                         crossFade_ = false;
                     }
 
-                    newLoopFadePhase_ += fabs(newSpeed_);
+                    newLoopFadePhase_ += fabs(newReadSpeed_);
                     if (newLoopFadePhase_ >= kLooperFadeSamples)
                     {
                         newLoopFadePhase_ = 0;
@@ -279,7 +345,7 @@ private:
                     right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
                 }
 
-                phase_ += speed_;
+                phase_ += readSpeed_;
                 if (phase_ >= length_)
                 {
                     phase_ -= length_;
@@ -297,7 +363,7 @@ private:
                     }
                 }
 
-                newPhase_ += newSpeed_;
+                newPhase_ += newReadSpeed_;
                 if (newPhase_ >= newLength_)
                 {
                     newPhase_ -= newLength_;
@@ -332,7 +398,7 @@ private:
         length_ = newLength_;
         start_ = newStart_;
         end_ = newEnd_;
-        speed_ = newSpeed_;
+        readSpeed_ = newReadSpeed_;
         loopFadePhase_ = newLoopFadePhase_;
     }
 
@@ -348,12 +414,16 @@ public:
         sosOut_ = AudioBuffer::create(2, patchState_->blockSize);
         limiter_ = Limiter::create();
 
+        readDirection_ = PlaybackDirection::PLAYBACK_FORWARD;
+        writeDirection_ = PlaybackDirection::PLAYBACK_FORWARD;
+
         inputGain_ = 1.f;
         feedback_ = 0;
         fadeVolume_ = 1.f;
         speedVolume_ = 1.f;
-        speedValue_ = 0;
-        speed_ = newSpeed_ = 1.f;
+        readSpeedValue_ = 0;
+        readSpeed_ = newReadSpeed_ = 1.f;
+        writeSpeed_ = 1.f;
         phase_ = newPhase_ = 0;
         wPhase_ = bufferPhase_ = 0;
         length_ = newLength_ = kLooperChannelBufferLength;
@@ -425,9 +495,14 @@ public:
 #endif
         }
 
-        MapSpeed();
-        float s = Modulate(speedValue_, patchCtrls_->looperSpeedModAmount, patchState_->modValue, patchCtrls_->looperSpeedCvAmount, patchCvs_->looperSpeed, -2.f, 2.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        SetSpeed(s);
+#ifdef USE_WRITE_VARISPEED
+        MapWriteSpeed();
+        SetWriteSpeed(writeSpeedValue_);
+#endif
+
+        MapReadSpeed();
+        float rs = Modulate(readSpeedValue_, patchCtrls_->looperSpeedModAmount, patchState_->modValue, patchCtrls_->looperSpeedCvAmount, patchCvs_->looperSpeed, -2.f, 2.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        SetReadSpeed(rs);
 
         float t = Modulate(patchCtrls_->looperStart, patchCtrls_->looperStartModAmount, patchState_->modValue, patchCtrls_->looperStartCvAmount, patchCvs_->looperStart, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetStart(t);

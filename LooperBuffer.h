@@ -84,7 +84,7 @@ public:
         return false;
     }
 
-    inline void WriteAt(int position, float value, float level = 1.f)
+    inline void WriteAt(uint32_t position, float value, float level = 1.f)
     {
         while (position >= kLooperTotalBufferLength)
         {
@@ -105,24 +105,45 @@ public:
         }
     }
 
-    inline void WriteLinear(float p, float left, float right, PlaybackDirection direction = PLAYBACK_FORWARD)
+    inline void WriteLinear(float p, float left, float right, PlaybackDirection direction = PLAYBACK_FORWARD, float level = 1.f)
     {
         uint32_t i = uint32_t(p);
         float f = p - i;
 
         i *= 2;
 
-        WriteAt(i, left * (1.f - f));
-        WriteAt(i + 2 * direction, left * f);
+        if (writeFadeIn_ || writeFadeOut_)
+        {
+            level = writeFadeIndex_ * kLooperFadeSamplesR;
+            if (writeFadeOut_)
+            {
+                level = 1.f - level;
+            }
+            writeFadeIndex_++;
+            if (writeFadeIndex_ >= kLooperFadeSamples)
+            {
+                if (writeFadeIn_)
+                {
+                    level = 1.f;
+                    writeFadeIn_ = false;
+                }
+                else
+                {
+                    level = 0.f;
+                    writeFadeOut_ = false;
+                }
+            }
+        }
 
-        WriteAt(i + direction, right *  (1.f - f));
-        WriteAt(i + 3 * direction, right * f);
+        WriteAt(i, left * (1.f - f), level);
+        WriteAt(i + 2 * direction, left * f, level);
+
+        WriteAt(i + direction, right *  (1.f - f), level);
+        WriteAt(i + 3 * direction, right * f, level);
     }
 
-    inline void Write(float p, float left, float right, float level = 1.f)
+    inline void Write(uint32_t i, float left, float right, float level = 1.f)
     {
-        uint32_t i = uint32_t(p);
-
         i *= 2;
 
         if (writeFadeIn_ || writeFadeOut_)

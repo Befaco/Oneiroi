@@ -151,6 +151,7 @@ public:
         patchState_->randomHasSlew = false;
 
         // Alt params
+        patchCtrls_->looperWriteSpeed = 0.75f;
         patchCtrls_->looperSos = 0.f;
         patchCtrls_->looperFilter = 0.55f; // Center is not 0.5
         patchCtrls_->looperResampling = getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
@@ -203,8 +204,9 @@ public:
         faders_[PARAM_FADER_AMBIENCE_VOL] = FaderController::create(patchState_, &patchCtrls_->ambienceVol);
 
         knobs_[PARAM_KNOB_LOOPER_SPEED] = KnobController::create(
-            patchState_, &patchCtrls_->looperSpeed,
-            NULL,
+            patchState_,
+            &patchCtrls_->looperReadSpeed,
+            &patchCtrls_->looperWriteSpeed,
             &patchCtrls_->looperSpeedModAmount,
             &patchCtrls_->looperSpeedCvAmount
         );
@@ -342,7 +344,7 @@ public:
         leds_[LED_ARROW_RIGHT] = Led::create(RIGHT_ARROW_PARAM);
 
         midiOuts_[PARAM_MIDI_LOOPER_LENGTH] = MidiController::create(&patchCtrls_->looperLength, ParamMidi::PARAM_MIDI_LOOPER_LENGTH);
-        midiOuts_[PARAM_MIDI_LOOPER_SPEED] = MidiController::create(&patchCtrls_->looperSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED);
+        midiOuts_[PARAM_MIDI_LOOPER_SPEED] = MidiController::create(&patchCtrls_->looperReadSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED);
         midiOuts_[PARAM_MIDI_LOOPER_START] = MidiController::create(&patchCtrls_->looperStart, ParamMidi::PARAM_MIDI_LOOPER_START);
         midiOuts_[PARAM_MIDI_LOOPER_SOS] = MidiController::create(&patchCtrls_->looperSos, ParamMidi::PARAM_MIDI_LOOPER_SOS);
         midiOuts_[PARAM_MIDI_LOOPER_FILTER] = MidiController::create(&patchCtrls_->looperFilter, ParamMidi::PARAM_MIDI_LOOPER_FILTER);
@@ -634,7 +636,7 @@ public:
             values[4] = patchCtrls_->filterCutoff;
             values[5] = patchCtrls_->filterResonance;
             values[6] = patchCtrls_->looperLength;
-            values[7] = patchCtrls_->looperSpeed;
+            values[7] = patchCtrls_->looperReadSpeed;
             values[8] = patchCtrls_->looperStart;
             values[9] = patchCtrls_->oscDetune;
             values[10] = tune_;

@@ -174,7 +174,8 @@ struct PatchCtrls
     float looperVol;
     float looperSos;
     float looperFilter;
-    float looperSpeed;
+    float looperReadSpeed;
+    float looperWriteSpeed;
     float looperSpeedModAmount;
     float looperSpeedCvAmount;
     float looperStart;
