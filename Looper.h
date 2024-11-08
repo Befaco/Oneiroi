@@ -44,7 +44,7 @@ private:
     bool crossFade_;
     bool recording_;
 
-    float fadeIndex_, newFadeIndex_;
+    float loopFadePhase_, newLoopFadePhase_;
 
     uint32_t bufferPhase_;
     uint32_t length_, start_, end_;
@@ -52,7 +52,7 @@ private:
 
     Schmitt trigger_;
 
-    Lut<int, 64> startLUT_{0, kLooperChannelBufferLength - 1};
+    Lut<int, 128> startLUT_{0, kLooperChannelBufferLength - 1};
     Lut<int, 128> lengthLUT_{kLooperLoopLengthMin, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO};
 
     void MapSpeed()
@@ -184,8 +184,8 @@ private:
 
             if (!crossFade_ && length_ > kLooperFadeSamples)
             {
-                fadeIndex_ = 0;
-                newFadeIndex_ = 0;
+                loopFadePhase_ = 0;
+                newLoopFadePhase_ = 0;
                 fadeVolume_ = 1.f;
                 crossFade_ = true;
             }
@@ -250,29 +250,29 @@ private:
 
                     if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
                     {
-                        buffer_->ReadLinear(end_ + fadeIndex_, newEnd_ + newFadeIndex_, x, leftTail, rightTail, direction_);
+                        buffer_->ReadLinear(end_ + loopFadePhase_, newEnd_ + newLoopFadePhase_, x, leftTail, rightTail, direction_);
                     }
                     else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
                     {
-                        buffer_->ReadLinear(start_ + kLooperFadeSamples - fadeIndex_, newStart_ + kLooperFadeSamples - newFadeIndex_, x, leftTail, rightTail, direction_);
+                        buffer_->ReadLinear(start_ + kLooperFadeSamples - loopFadePhase_, newStart_ + kLooperFadeSamples - newLoopFadePhase_, x, leftTail, rightTail, direction_);
                     }
 
                     left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
                     right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
 
-                    fadeIndex_ += fabs(speed_);
-                    fadeVolume_ = fadeIndex_ * kLooperFadeSamplesR;
-                    if (fadeIndex_ >= kLooperFadeSamples)
+                    loopFadePhase_ += fabs(speed_);
+                    fadeVolume_ = loopFadePhase_ * kLooperFadeSamplesR;
+                    if (loopFadePhase_ >= kLooperFadeSamples)
                     {
-                        fadeIndex_ = 0;
+                        loopFadePhase_ = 0;
                         fadeVolume_ = 1.f;
                         crossFade_ = false;
                     }
 
-                    newFadeIndex_ += fabs(newSpeed_);
-                    if (newFadeIndex_ >= kLooperFadeSamples)
+                    newLoopFadePhase_ += fabs(newSpeed_);
+                    if (newLoopFadePhase_ >= kLooperFadeSamples)
                     {
-                        newFadeIndex_ = 0;
+                        newLoopFadePhase_ = 0;
                     }
 
                     left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
@@ -333,7 +333,7 @@ private:
         start_ = newStart_;
         end_ = newEnd_;
         speed_ = newSpeed_;
-        fadeIndex_ = newFadeIndex_;
+        loopFadePhase_ = newLoopFadePhase_;
     }
 
 public:
@@ -353,7 +353,7 @@ public:
         fadeVolume_ = 1.f;
         speedVolume_ = 1.f;
         speedValue_ = 0;
-        speed_ = newSpeed_ = 0;
+        speed_ = newSpeed_ = 1.f;
         phase_ = newPhase_ = 0;
         wPhase_ = bufferPhase_ = 0;
         length_ = newLength_ = kLooperChannelBufferLength;
@@ -361,7 +361,7 @@ public:
         end_ = newEnd_ = kLooperChannelBufferLength - 1;
         filterValue_ = 0;
         xi_ = 1.f / patchState_->blockSize;
-        fadeIndex_ = 0;
+        loopFadePhase_ = 0;
         boc_ = true;
         cleared_ = false;
         crossFade_ = false;

@@ -5,7 +5,6 @@
 #include "EnvFollower.h"
 #include "SineOscillator.h"
 #include "DjFilter.h"
-#include "ParameterInterpolator.h"
 #include <stdint.h>
 
 enum EchoTap

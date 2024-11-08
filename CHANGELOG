@@ -13,11 +13,12 @@
 - Fixed sine waves unison (#12)
 - Fixed wavetable offset CV (#16)
 - Removed a bit of lag from V/OCT input
-- Tweaked the oscillators' levels
+- Tweaked the oscillators' levels (#17)
 - Swapped biquad filters for SVF in DjFilter to save some CPU, especially when
   looper is recording
 - Added fade in/out when starting/stopping recording to avoid clicks
 - Smoothed echo's density (#9)
+- Raised looper's start resolution
 
 ## 1.0 (2024-07-16)
 
