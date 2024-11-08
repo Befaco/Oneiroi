@@ -132,6 +132,7 @@ constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kResoInfiniteFeedbackLevel = 1.001f;
 
+constexpr int32_t kEchoFadeSamples = 7200; // 150 ms @ audio rate
 constexpr int32_t kEchoMinLengthSamples = 480; // 10 ms @ audio rate
 constexpr int32_t kEchoMaxLengthSamples = 192000; // 4 seconds @ audio rate
 constexpr int kEchoTaps = 4;
@@ -140,8 +141,8 @@ const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
 const int32_t kEchoMaxExternalClockSamples = kEchoMaxLengthSamples / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoMakeupGainMin = 0.7f;
-constexpr float kEchoMakeupGainMax = 0.9f;
+constexpr float kEchoMakeupGainMin = 0.6f;
+constexpr float kEchoMakeupGainMax = 0.8f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
 constexpr int kAmbienceNofDiffusers = 4;
@@ -155,7 +156,7 @@ constexpr float kAmbienceGainMax = 0.5f;
 constexpr float kAmbienceMakeupGain = 1.4f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
-constexpr float kOutputMakeupGain = 5.f;
+constexpr float kOutputMakeupGain = 6.f;
 
 constexpr float kParamCatchUpDelta = 0.005f;
 

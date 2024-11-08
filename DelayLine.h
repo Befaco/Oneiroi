@@ -49,7 +49,7 @@ public:
 
     inline float readAt(int index)
     {
-        int i = writeIndex_ - index;
+        int i = writeIndex_ - index - 1;
         if (i < 0)
         {
             i += size_;
@@ -68,13 +68,34 @@ public:
         return Interpolator::linear(y0, y1, frac);
     }
 
+    inline float read(float index1, float index2, float x)
+    {
+        uint32_t idx1 = (uint32_t)index1;
+        float frac1 = index1 - idx1;
+        float a0 = readAt(idx1);
+        float a1 = readAt(idx1 + 1);
+
+        float v = Interpolator::linear(a0, a1, frac1);
+        if (x == 0)
+        {
+            return v;
+        }
+
+        uint32_t idx2 = (uint32_t)index2;
+        float frac2 = index2 - idx2;
+        float b0 = readAt(idx2);
+        float b1 = readAt(idx2 + 1);
+
+        return v * (1.f - x) + Interpolator::linear(b0, b1, frac2) * x;
+    }
+
     inline void write(float value, int stride = 1)
     {
+        buffer_[writeIndex_] = value; //dc_->process(value);
         writeIndex_ += stride;
         if  (writeIndex_ >= size_)
         {
             writeIndex_ -= size_;
         }
-        buffer_[writeIndex_] = value; //dc_->process(value);
     }
 };

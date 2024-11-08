@@ -5,6 +5,7 @@
 #include "EnvFollower.h"
 #include "SineOscillator.h"
 #include "DjFilter.h"
+#include "ParameterInterpolator.h"
 #include <stdint.h>
 
 enum EchoTap
@@ -27,12 +28,15 @@ private:
     HysteresisQuantizer densityQuantizer_;
 
     int echoDensityRatio_;
-    float echoDensity_;
+    float echoDensity_, oldDensity_;
 
     float levels_[kEchoTaps], outs_[kEchoTaps];
     float tapsTimes_[kEchoTaps], newTapsTimes_[kEchoTaps], maxTapsTimes_[kEchoTaps];
     float amp_, repeats_, filterValue_;
-    float xi_;
+
+    float fadeInc_;
+    int fadeIndex_;
+    bool fade_;
 
     bool externalClock_;
     bool infinite_;
@@ -95,6 +99,13 @@ private:
 
     void SetDensity(float value)
     {
+        if (fade_)
+        {
+            return;
+        }
+
+        fade_ = true;
+
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
         {
             int newRatio = densityQuantizer_.Process(value);
@@ -163,8 +174,11 @@ public:
         }
 
         echoDensity_ = 1.f;
+        echoDensityRatio_ = 0;
         amp_ = 1.4f;
-        xi_ = 1.f / patchState_->blockSize;
+        fadeInc_ = 1.f / kEchoFadeSamples;
+        fadeIndex_ = 0;
+        fade_ = false;
 
         externalClock_ = false;
         infinite_ = false;
@@ -226,21 +240,27 @@ public:
         SetRepeats(r);
 
         float x = 0;
-
         for (int i = 0; i < size; i++)
         {
-            float x0 = 1.0f - x;
-
-            outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(tapsTimes_[TAP_LEFT_A]) * x0 + lines_[TAP_LEFT_A]->read(newTapsTimes_[TAP_LEFT_A]) * x; // A
-            outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(tapsTimes_[TAP_LEFT_B]) * x0 + lines_[TAP_LEFT_B]->read(newTapsTimes_[TAP_LEFT_B]) * x; // B
-            outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(tapsTimes_[TAP_RIGHT_A]) * x0 + lines_[TAP_RIGHT_A]->read(newTapsTimes_[TAP_RIGHT_A]) * x; // A
-            outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B]) * x0 + lines_[TAP_RIGHT_B]->read(newTapsTimes_[TAP_RIGHT_B]) * x; // B
-
-            x += xi_;
-            if (x >= size)
+            if (fade_)
             {
-                x = 0;
+                x = fadeIndex_ * fadeInc_;
+                fadeIndex_++;
+                if (fadeIndex_ >= kEchoFadeSamples)
+                {
+                    fadeIndex_ = 0;
+                    fade_ = false;
+                    for (size_t j = 0; j < kEchoTaps; j++)
+                    {
+                        tapsTimes_[j] = newTapsTimes_[j];
+                    }
+                }
             }
+
+            outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(tapsTimes_[TAP_LEFT_A], newTapsTimes_[TAP_LEFT_A], x); // A
+            outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(tapsTimes_[TAP_LEFT_B], newTapsTimes_[TAP_LEFT_B], x); // B
+            outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(tapsTimes_[TAP_RIGHT_A], newTapsTimes_[TAP_RIGHT_A], x); // A
+            outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B], newTapsTimes_[TAP_RIGHT_B], x); // B
 
             float leftFb = HardClip(outs_[TAP_LEFT_A] * levels_[TAP_LEFT_A] + outs_[TAP_RIGHT_A] * levels_[TAP_RIGHT_A]);
             float rightFb = HardClip(outs_[TAP_LEFT_B] * levels_[TAP_LEFT_B] + outs_[TAP_RIGHT_B] * levels_[TAP_RIGHT_B]);
@@ -272,11 +292,6 @@ public:
 
             leftOut[i] = CheapEqualPowerCrossFade(lIn, left * amp_, patchCtrls_->echoVol, 1.8f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, right * amp_, patchCtrls_->echoVol, 1.8f);
-        }
-
-        for (size_t j = 0; j < kEchoTaps; j++)
-        {
-            tapsTimes_[j] = newTapsTimes_[j];
         }
     }
 };

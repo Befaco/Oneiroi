@@ -26,12 +26,12 @@ private:
         switch (filter_)
         {
         case FilterType::LP:
-            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.5f);
+            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.55f);
             lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, 0.5f);
             break;
         case FilterType::HP:
-            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, 0.5f);
-            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, 0.5f);
+            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, 0.55f);
+            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, 0.55f);
             break;
 
         default:
