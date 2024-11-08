@@ -75,11 +75,10 @@ static const float kLooperFadeSamplesR = 1.f / kLooperFadeSamples;
 static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 //static const int32_t kLooperTotalBufferLength = 480000; // samples for both channels (interleaved) = ~8 seconds stereo buffer
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
-static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
 constexpr float kLooperNoiseLevel = 0.3f;
 constexpr float kLooperInputGain = 1.f;
 constexpr float kLooperResampleGain = 1.4f;
-constexpr float kLooperResampleLedAtt = 1.f;
+constexpr float kLooperResampleLedAtt = 0.8f;
 constexpr float kLooperMakeupGain = 1.2f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;

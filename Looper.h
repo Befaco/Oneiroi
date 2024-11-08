@@ -12,6 +12,7 @@
 #include <cmath>
 
 //#define USE_WRITE_VARISPEED
+//#define USE_WRITE_SYNC
 
 class Looper
 {
@@ -28,7 +29,7 @@ private:
 
     PlaybackDirection direction_;
 
-    float bufferPhase_, wPhase_;
+    float wPhase_;
     float phase_, newPhase_;
     float speed_, newSpeed_;
     float speedValue_;
@@ -43,8 +44,9 @@ private:
     bool crossFade_;
     bool recording_;
 
-    int fadeIndex_, newFadeIndex_;
+    float fadeIndex_, newFadeIndex_;
 
+    uint32_t bufferPhase_;
     uint32_t length_, start_, end_;
     uint32_t newLength_, newStart_, newEnd_;
 
@@ -252,14 +254,14 @@ private:
                     }
                     else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
                     {
-                        buffer_->ReadLinear(start_ - fadeIndex_, newStart_ - newFadeIndex_, x, leftTail, rightTail, direction_);
+                        buffer_->ReadLinear(start_ + kLooperFadeSamples - fadeIndex_, newStart_ + kLooperFadeSamples - newFadeIndex_, x, leftTail, rightTail, direction_);
                     }
 
                     left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
                     right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
 
                     fadeIndex_ += fabs(speed_);
-                    fadeVolume_ = fadeIndex_ / kLooperFadeSamples;
+                    fadeVolume_ = fadeIndex_ * kLooperFadeSamplesR;
                     if (fadeIndex_ >= kLooperFadeSamples)
                     {
                         fadeIndex_ = 0;
@@ -319,10 +321,10 @@ private:
             output.getSamples(RIGHT_CHANNEL)[i] = right * speedVolume_;
 
             bufferPhase_++;
-            if (bufferPhase_ >= kLooperChannelBufferLength)
+            if (bufferPhase_ == kLooperChannelBufferLength)
             {
                 boc_ = true;
-                bufferPhase_ -= kLooperChannelBufferLength;
+                bufferPhase_ = 0;
             }
         }
 
@@ -406,12 +408,21 @@ public:
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource && (trigger_.Process(patchState_->clockReset || patchState_->clockTick)))
         {
             triggered_ = true;
+#ifdef USE_WRITE_SYNC
+            wPhase_ = start_;
+#endif
         }
         else if (ClockSource::CLOCK_SOURCE_INTERNAL == patchState_->clockSource)
         {
             // When the clock is internal, synchronize it with the looper's
             // begin of cycle.
             patchState_->tempo->trigger(boc_);
+#ifdef USE_WRITE_SYNC
+            if (boc_)
+            {
+                wPhase_ = 0;
+            }
+#endif
         }
 
         MapSpeed();

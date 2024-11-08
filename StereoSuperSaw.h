@@ -107,7 +107,7 @@ public:
             }
         }
 
-        output.multiply(0.35f * (1.2f - detune_));
+        output.multiply(0.3f * (1.4f - detune_));
     }
 };
 

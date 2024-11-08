@@ -1217,6 +1217,17 @@ public:
     // Called at block rate
     void Poll()
     {
+        if (startup_)
+        {
+            LoadMainParams();
+            LoadAltParams();
+            LoadModParams();
+            LoadCvParams();
+            startup_ = false;
+
+            return;
+        }
+
         for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
         {
             knobs_[i]->Read(ParamKnob(i));
@@ -1250,15 +1261,6 @@ public:
         HandleLeds();
         HandleCatchUp();
         HandleLedButtons();
-
-        if (startup_)
-        {
-            LoadMainParams();
-            LoadAltParams();
-            LoadModParams();
-            LoadCvParams();
-            startup_ = false;
-        }
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
