@@ -105,43 +105,6 @@ public:
         }
     }
 
-    inline void WriteLinear(float p, float left, float right, PlaybackDirection direction = PLAYBACK_FORWARD, float level = 1.f)
-    {
-        uint32_t i = uint32_t(p);
-        float f = p - i;
-
-        i *= 2;
-
-        if (writeFadeIn_ || writeFadeOut_)
-        {
-            level = writeFadeIndex_ * kLooperFadeSamplesR;
-            if (writeFadeOut_)
-            {
-                level = 1.f - level;
-            }
-            writeFadeIndex_++;
-            if (writeFadeIndex_ >= kLooperFadeSamples)
-            {
-                if (writeFadeIn_)
-                {
-                    level = 1.f;
-                    writeFadeIn_ = false;
-                }
-                else
-                {
-                    level = 0.f;
-                    writeFadeOut_ = false;
-                }
-            }
-        }
-
-        WriteAt(i, left * (1.f - f), level);
-        WriteAt(i + 2 * direction, left * f, level);
-
-        WriteAt(i + direction, right *  (1.f - f), level);
-        WriteAt(i + 3 * direction, right * f, level);
-    }
-
     inline void Write(uint32_t i, float left, float right, float level = 1.f)
     {
         i *= 2;
@@ -207,7 +170,7 @@ public:
     }
 
     // Interleaved reading.
-    inline void ReadLinear(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
+    inline void Read(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
     {
         float l0, l1;
         float r0, r1;
