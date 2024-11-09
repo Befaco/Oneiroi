@@ -112,6 +112,9 @@ constexpr float kOScWaveTablePreGain = 3.f;
 constexpr float kOScWaveTableGain = 0.2f;
 constexpr float kSourcesMakeupGain = 0.2f;
 
+constexpr float kDjFilterMakeupGainMin = 1.f;
+constexpr float kDjFilterMakeupGainMax = 1.4f;
+
 constexpr float kFilterFreqMin = 10.f;
 constexpr float kFilterFreqMax = 22000.f;
 constexpr float kFilterMakeupGain = 2.4f;
@@ -141,8 +144,8 @@ const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
 const int32_t kEchoMaxExternalClockSamples = kEchoMaxLengthSamples / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoMakeupGainMin = 0.6f;
-constexpr float kEchoMakeupGainMax = 0.8f;
+constexpr float kEchoMakeupGainMin = 0.5f;
+constexpr float kEchoMakeupGainMax = 0.9f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
 constexpr int kAmbienceNofDiffusers = 4;

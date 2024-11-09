@@ -18,7 +18,10 @@
   looper is recording
 - Added fade in/out when starting/stopping recording to avoid clicks
 - Smoothed echo's density (#9)
-- Raised looper's start resolution
+- Raised looper's start parameter resolution
+- DC blocking filters at the beginning and at the end of the audio chain to
+  reduce low end rumble
+- A bit of gain to DjFilter's extremes
 
 ## 1.0 (2024-07-16)
 

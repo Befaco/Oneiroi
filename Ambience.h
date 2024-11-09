@@ -180,23 +180,22 @@ public:
         needsUpdate_ = false;
     }
 
-    float Process(const float in, const float x1)
+    float Process(const float in, const float x)
     {
         float out = in;
-        float x0 = 1.f - x1;
 
         for (int i = 0; i < kAmbienceNofDiffusers - 1; i++)
         {
             float prev = HardClip(out - outs_[i] * df_);
             diffuse_[i]->write(prev);
             out = HardClip(prev * df_ + outs_[i]);
-            outs_[i] = diffuse_[i]->read(delayTimes_[i]) * x0 + diffuse_[i]->read(newDelayTimes_[i]) * x1;
+            outs_[i] = diffuse_[i]->read(delayTimes_[i], newDelayTimes_[i], x);
         }
 
         int lastDiff = kAmbienceNofDiffusers - 1;
         fbOut_ = outs_[lastDiff] * rt_;
         diffuse_[lastDiff]->write(out);
-        outs_[lastDiff] = diffuse_[lastDiff]->read(delayTimes_[lastDiff]) * x0 + diffuse_[lastDiff]->read(newDelayTimes_[lastDiff]) * x1;
+        outs_[lastDiff] = diffuse_[lastDiff]->read(delayTimes_[lastDiff], newDelayTimes_[lastDiff], x);
 
         return out;
     }
@@ -219,13 +218,10 @@ public:
         bs_ = s_ >> 1; // Reverse max block size is half the buffer size
         b_ = bs_; // Block pointer
         rb_ = 1.f / b_;
-
-        dc_ = DcBlockingFilter::create();
     }
     ~ReversedBuffer()
     {
         FloatArray::destroy(line_);
-        DcBlockingFilter::destroy(dc_);
     }
 
     static ReversedBuffer* create(int32_t size)
@@ -266,7 +262,7 @@ public:
 
     float Process(const float input)
     {
-        line_[i_++] = input; //dc_->process(input);
+        line_[i_++] = input;
         if (i_ == s_)
         {
             i_ = 0;
@@ -290,7 +286,6 @@ public:
     }
 
 private:
-    DcBlockingFilter* dc_;
     FloatArray line_;
     int32_t s_, d_, i_, o_, bs_, b_;
     float rb_;
@@ -315,6 +310,8 @@ private:
     ReversedBuffer *reversers_[2];
 
     EnvFollower* ef_[2];
+
+    DcBlockingFilter* dc_[2];
 
     float amp_, pan_, decay_, spaceTime_;
     float reverse_;
@@ -436,6 +433,7 @@ public:
             diffusers_[i] = Diffuse::create();
             reversers_[i] = ReversedBuffer::create(kAmbienceBufferSize);
             ef_[i] = EnvFollower::create();
+            dc_[i] = DcBlockingFilter::create();
         }
 
         dampFilters_[LEFT_CHANNEL]->SetHp(112);
@@ -458,6 +456,7 @@ public:
             Diffuse::destroy(diffusers_[i]);
             ReversedBuffer::destroy(reversers_[i]);
             EnvFollower::destroy(ef_[i]);
+            DcBlockingFilter::destroy(dc_[i]);
         }
         SineOscillator::destroy(panner_);
     }
@@ -519,6 +518,9 @@ public:
 
             leftFb *= 1.f - ef_[LEFT_CHANNEL]->process(leftFb);
             rightFb *= 1.f - ef_[RIGHT_CHANNEL]->process(rightFb);
+
+            leftFb = dc_[LEFT_CHANNEL]->process(leftFb);
+            rightFb = dc_[RIGHT_CHANNEL]->process(rightFb);
 
             left = diffusers_[LEFT_CHANNEL]->Process(leftFb, x);
             right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x);

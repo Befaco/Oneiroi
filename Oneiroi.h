@@ -43,7 +43,9 @@ private:
     AudioBuffer* osc1Out_;
     AudioBuffer* osc2Out_;
 
-    StereoDcBlockingFilter inputDcFilter_;
+    StereoDcBlockingFilter* inputDcFilter_;
+    StereoDcBlockingFilter* outputDcFilter_;
+
     EnvFollower* inEnvFollower_[2];
 
     FilterPosition filterPosition_, lastFilterPosition_;
@@ -81,6 +83,9 @@ public:
             inEnvFollower_[i] = EnvFollower::create();
             inEnvFollower_[i]->setLambda(0.9f);
         }
+
+        inputDcFilter_ = StereoDcBlockingFilter::create();
+        outputDcFilter_ = StereoDcBlockingFilter::create();
     }
     ~Oneiroi()
     {
@@ -121,7 +126,7 @@ public:
         FloatArray left = buffer.getSamples(LEFT_CHANNEL);
         FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
 
-        inputDcFilter_.process(buffer, buffer);
+        inputDcFilter_->process(buffer, buffer);
 
         const int size = buffer.getSize();
 
@@ -208,6 +213,8 @@ public:
         {
             filter_->process(buffer, buffer);
         }
+
+        outputDcFilter_->process(buffer, buffer);
 
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
