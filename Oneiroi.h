@@ -43,7 +43,9 @@ private:
     AudioBuffer* osc1Out_;
     AudioBuffer* osc2Out_;
 
-    StereoDcBlockingFilter inputDcFilter_, resampleDcFilter_;
+    StereoDcBlockingFilter* inputDcFilter_;
+    StereoDcBlockingFilter* outputDcFilter_;
+
     EnvFollower* inEnvFollower_[2];
 
     FilterPosition filterPosition_, lastFilterPosition_;
@@ -81,6 +83,9 @@ public:
             inEnvFollower_[i] = EnvFollower::create();
             inEnvFollower_[i]->setLambda(0.9f);
         }
+
+        inputDcFilter_ = StereoDcBlockingFilter::create();
+        outputDcFilter_ = StereoDcBlockingFilter::create();
     }
     ~Oneiroi()
     {
@@ -130,7 +135,7 @@ public:
         FloatArray left = buffer.getSamples(LEFT_CHANNEL);
         FloatArray right = buffer.getSamples(RIGHT_CHANNEL);
 
-        inputDcFilter_.process(buffer, buffer);
+        inputDcFilter_->process(buffer, buffer);
 
         const int size = buffer.getSize();
 
@@ -140,7 +145,7 @@ public:
             float l;
             if (patchCtrls_->looperResampling)
             {
-                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kResampleLedAtt;
+                l = Mix2(inEnvFollower_[0]->process(resample_->getSamples(LEFT_CHANNEL)[i]), inEnvFollower_[1]->process(resample_->getSamples(RIGHT_CHANNEL)[i])) * kLooperResampleLedAtt;
             }
             else
             {
@@ -156,7 +161,6 @@ public:
 
         if (patchCtrls_->looperResampling)
         {
-            resampleDcFilter_.process(*resample_, *resample_);
             looper_->Process(*resample_, buffer);
         }
         else
@@ -219,12 +223,13 @@ public:
             filter_->process(buffer, buffer);
         }
 
+        outputDcFilter_->process(buffer, buffer);
+
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
         buffer.multiply(patchState_->outLevel);
 
         resample_->copyFrom(buffer);
-        resample_->multiply(kResampleGain);
     }
 };
 

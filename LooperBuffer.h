@@ -27,17 +27,23 @@ private:
     const int32_t kLooperTotalBufferLength;
     const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
     const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
+    int writeFadeIndex_;
+    bool writeFadeIn_, writeFadeOut_;
+
 public:
     LooperBuffer(float sampleRate) : 
         kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds)
     {
         buffer_ = FloatArray::create(kLooperTotalBufferLength);
         buffer_.noise();
-        buffer_.multiply(0.5f); // Tame the noise a bit
+        buffer_.multiply(kLooperNoiseLevel); // Tame the noise a bit
 
         clearBlock_ = buffer_.getData();
 
         writeHead_ = 0;
+        writeFadeIndex_ = 0;
+        writeFadeIn_ = false;
+        writeFadeOut_ = false;
 
         for (size_t i = 0; i < 2; i++)
         {
@@ -86,7 +92,7 @@ public:
         return false;
     }
 
-    inline void WriteAt(int position, float value)
+    inline void WriteAt(uint32_t position, float value, float level = 1.f)
     {
         while (position >= kLooperTotalBufferLength)
         {
@@ -97,31 +103,64 @@ public:
             position += kLooperTotalBufferLength;
         }
 
-        buffer_[position] = dc_[position % 2]->process(value);
+        if (level == 1.f)
+        {
+            buffer_[position] = dc_[position % 2]->process(value);
+        }
+        else
+        {
+            buffer_[position] = dc_[position % 2]->process(value) * level + buffer_[position] * (1.f - level);
+        }
     }
 
-    inline void WriteLinear(float p, float left, float right, PlaybackDirection direction = PLAYBACK_FORWARD)
+    inline void Write(uint32_t i, float left, float right, float level = 1.f)
     {
-        uint32_t i = uint32_t(p);
-        float f = p - i;
-
         i *= 2;
 
-        WriteAt(i, left * (1.f - f));
-        WriteAt(i + 2 * direction, left * f);
+        if (writeFadeIn_ || writeFadeOut_)
+        {
+            level = writeFadeIndex_ * kLooperFadeSamplesR;
+            if (writeFadeOut_)
+            {
+                level = 1.f - level;
+            }
+            writeFadeIndex_++;
+            if (writeFadeIndex_ >= kLooperFadeSamples)
+            {
+                if (writeFadeIn_)
+                {
+                    level = 1.f;
+                    writeFadeIn_ = false;
+                }
+                else
+                {
+                    level = 0.f;
+                    writeFadeOut_ = false;
+                }
+            }
+        }
 
-        WriteAt(i + direction, right *  (1.f - f));
-        WriteAt(i + 3 * direction, right * f);
+        WriteAt(i, left, level);
+        WriteAt(i + 1, right, level);
     }
 
-    inline void Write(float p, float left, float right)
+    inline bool IsFadingOutWrite()
     {
-        uint32_t i = uint32_t(p);
+        return writeFadeOut_;
+    }
 
-        i *= 2;
+    inline void FadeInWrite()
+    {
+        writeFadeIn_ = true;
+        writeFadeOut_ = false;
+        writeFadeIndex_ = 0;
+    }
 
-        WriteAt(i, left);
-        WriteAt(i + 1, right);
+    inline void FadeOutWrite()
+    {
+        writeFadeOut_ = true;
+        writeFadeIn_ = false;
+        writeFadeIndex_ = 0;
     }
 
     inline float ReadAt(int position)
@@ -139,7 +178,7 @@ public:
     }
 
     // Interleaved reading.
-    inline void ReadLinear(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
+    inline void Read(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
     {
         float l0, l1;
         float r0, r1;

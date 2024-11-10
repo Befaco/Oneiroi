@@ -75,7 +75,14 @@ static const float kLooperFadeTwice = kLooperFade * 2;
 static const float kLooperTotalBufferLengthSeconds = (1 << 19) / 48000.; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengthSeconds / 2;
 // static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
-constexpr float kLooperMakeupGain = 1.f;
+// static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
+//static const int32_t kLooperTotalBufferLength = 480000; // samples for both channels (interleaved) = ~8 seconds stereo buffer
+// static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
+constexpr float kLooperNoiseLevel = 0.3f;
+constexpr float kLooperInputGain = 1.f;
+constexpr float kLooperResampleGain = 1.4f;
+constexpr float kLooperResampleLedAtt = 0.8f;
+constexpr float kLooperMakeupGain = 1.2f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 
 constexpr float kRecordOnsetLevel = 0.005f;
@@ -98,13 +105,15 @@ constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
 
-constexpr float kInputGain = 1.65f;
-
-constexpr float kOScSineGain = 0.4f;
+constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
-constexpr float kOScSuperSawGain = 0.45f;
-constexpr float kOScWaveTableGain = 0.45f;
-constexpr float kSourcesMakeupGain = 0.15f;
+constexpr float kOScSuperSawGain = 0.6f;
+constexpr float kOScWaveTablePreGain = 3.f;
+constexpr float kOScWaveTableGain = 0.2f;
+constexpr float kSourcesMakeupGain = 0.2f;
+
+constexpr float kDjFilterMakeupGainMin = 1.f;
+constexpr float kDjFilterMakeupGainMax = 1.4f;
 
 constexpr float kFilterFreqMin = 10.f;
 constexpr float kFilterFreqMax = 22000.f;
@@ -126,7 +135,8 @@ constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kResoInfiniteFeedbackLevel = 1.001f;
 
-constexpr float kEchoMinLength = 1.f / 100.f; // 10 ms @ audio rate
+constexpr float kEchoFade = 0.15; // 150 ms @ audio rate
+constexpr float kEchoMinLength = 0.01; // 10 ms @ audio rate
 constexpr float kEchoMaxLength = 4.f; // 4 seconds @ audio rate
 constexpr int kEchoTaps = 4;
 const float kEchoTapsRatios[kEchoTaps] = { 0.75f, 0.25f, 0.375f, 1.f };  // TAP_LEFT_A (1/2 dot), TAP_LEFT_B (1/8), TAP_RIGHT_A (1/8 dot), TAP_RIGHT_B (1)
@@ -134,7 +144,7 @@ const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
 const float kEchoMaxExternalClock = kEchoMaxLength / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoMakeupGainMin = 0.7f;
+constexpr float kEchoMakeupGainMin = 0.5f;
 constexpr float kEchoMakeupGainMax = 0.9f;
 
 constexpr int32_t kAmbienceLengthSeconds = 1.f;
@@ -149,10 +159,7 @@ constexpr float kAmbienceGainMax = 0.5f;
 constexpr float kAmbienceMakeupGain = 1.4f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
-constexpr float kOutputMakeupGain = 5.f;
-
-constexpr float kResampleGain = 2.f;
-constexpr float kResampleLedAtt = 0.8f;
+constexpr float kOutputMakeupGain = 6.f;
 
 constexpr float kParamCatchUpDelta = 0.005f;
 
@@ -713,9 +720,9 @@ float SoftClip(float x)
   }
 }
 
-float HardClip(float x)
+float HardClip(float x, float limit = 1.f)
 {
-    return Clamp(x, -1.f, 1.f);
+    return Clamp(x, -limit, limit);
 }
 
 float AudioClip(float x, float s = 1.f)

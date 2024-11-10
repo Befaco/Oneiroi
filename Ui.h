@@ -208,7 +208,8 @@ public:
         faders_[PARAM_FADER_AMBIENCE_VOL] = FaderController::create(patchState_, &patchCtrls_->ambienceVol);
 
         knobs_[PARAM_KNOB_LOOPER_SPEED] = KnobController::create(
-            patchState_, &patchCtrls_->looperSpeed,
+            patchState_,
+            &patchCtrls_->looperSpeed,
             NULL,
             &patchCtrls_->looperSpeedModAmount,
             &patchCtrls_->looperSpeedCvAmount
@@ -236,7 +237,8 @@ public:
             &octave_,
             &patchCtrls_->oscPitchModAmount,
             &patchCtrls_->oscPitchCvAmount,
-            0.01f, 0.1f
+            0.01f,
+            0.1f
         );
         knobs_[PARAM_KNOB_OSC_DETUNE] = KnobController::create(
             patchState_,
@@ -284,7 +286,8 @@ public:
             &patchCtrls_->echoFilter,
             &patchCtrls_->echoDensityModAmount,
             &patchCtrls_->echoDensityCvAmount,
-            0.005f
+            0.01f,
+            0
         );
         knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(
             patchState_,
@@ -1235,6 +1238,17 @@ public:
     // Called at block rate
     void Poll()
     {
+        if (startup_ && false)
+        {
+            LoadMainParams();
+            LoadAltParams();
+            LoadModParams();
+            LoadCvParams();
+            startup_ = false;
+
+            return;
+        }
+
         for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
         {
             //knobs_[i]->Read(ParamKnob(i));
@@ -1268,15 +1282,6 @@ public:
         HandleLeds();
         // HandleCatchUp();
         HandleLedButtons();
-
-        if (startup_ && false)
-        {
-            LoadMainParams();
-            LoadAltParams();
-            LoadModParams();
-            LoadCvParams();
-            startup_ = false;
-        }
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 

@@ -16,6 +16,7 @@ private:
   float detunes_[7] = {};
   float volumes_[7] = {};
   float oldFreq_ = 0;
+  float detune_ = 0;
 
 public:
     SuperSaw(float sampleRate)
@@ -26,6 +27,7 @@ public:
             detunes_[i] = 0;
             volumes_[i] = 0;
         }
+        detune_ = 0;
     }
     ~SuperSaw()
     {
@@ -45,27 +47,27 @@ public:
 
     void SetDetune(float value, bool minor = false)
     {
-        float detune = value * 0.4f;
+        detune_ = value * 0.4f;
 
         if (minor)
         {
-            detunes_[0] = 1 - detune * 0.877538f;
-            detunes_[1] = 1 - detune * 0.66516f;
-            detunes_[2] = 1 - detune * 0.318207f;
+            detunes_[0] = 1 - detune_ * 0.877538f;
+            detunes_[1] = 1 - detune_ * 0.66516f;
+            detunes_[2] = 1 - detune_ * 0.318207f;
             detunes_[3] = 1;
-            detunes_[4] = 1 + detune * 0.189207f;
-            detunes_[5] = 1 + detune * 0.498307f;
-            detunes_[6] = 1 + detune * 0.781797f;
+            detunes_[4] = 1 + detune_ * 0.189207f;
+            detunes_[5] = 1 + detune_ * 0.498307f;
+            detunes_[6] = 1 + detune_ * 0.781797f;
         }
         else
         {
-            detunes_[0] = 1 - detune * 0.11002313f;
-            detunes_[1] = 1 - detune * 0.06288439f;
-            detunes_[2] = 1 - detune * 0.01952356f;
+            detunes_[0] = 1 - detune_ * 0.11002313f;
+            detunes_[1] = 1 - detune_ * 0.06288439f;
+            detunes_[2] = 1 - detune_ * 0.01952356f;
             detunes_[3] = 1;
-            detunes_[4] = 1 + detune * 0.01991221f;
-            detunes_[5] = 1 + detune * 0.06216538f;
-            detunes_[6] = 1 + detune * 0.10745242f;
+            detunes_[4] = 1 + detune_ * 0.01991221f;
+            detunes_[5] = 1 + detune_ * 0.06216538f;
+            detunes_[6] = 1 + detune_ * 0.10745242f;
         }
 
         value = Clamp(value * 0.5f, 0.005f, 0.5f);
@@ -105,7 +107,7 @@ public:
             }
         }
 
-        output.multiply(0.378f);
+        output.multiply(0.3f * (1.4f - detune_));
     }
 };
 

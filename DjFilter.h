@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Commons.h"
-#include "BiquadFilter.h"
+#include "StateVariableFilter.h"
 
 class DjFilter
 {
@@ -13,25 +13,27 @@ private:
         HP,
     };
 
-    BiquadFilter* lpfs_[2];
-    BiquadFilter* hpfs_[2];
+    StateVariableFilter* lpfs_[2];
+    StateVariableFilter* hpfs_[2];
 
     FilterType filter_ = FilterType::NO_FILTER;
-    float freq_ = 0.f;
-    float lpfMix_ = 1.f;
-    float hpfMix_ = 0.f;
+    
+    float freq_;
+    float lpfMix_;
+    float hpfMix_;
+    float amp_;
 
     void UpdateFilter()
     {
         switch (filter_)
         {
         case FilterType::LP:
-            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, FilterStage::SALLEN_KEY_Q);
-            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, FilterStage::SALLEN_KEY_Q);
+            lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.55f);
+            lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, 0.55f);
             break;
         case FilterType::HP:
-            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, FilterStage::SALLEN_KEY_Q);
-            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, FilterStage::SALLEN_KEY_Q);
+            hpfs_[LEFT_CHANNEL]->setHighPass(freq_, 0.55f);
+            hpfs_[RIGHT_CHANNEL]->setHighPass(freq_, 0.55f);
             break;
 
         default:
@@ -44,18 +46,21 @@ public:
     {
         for (size_t i = 0; i < 2; i++)
         {
-            lpfs_[i] = BiquadFilter::create(sampleRate);
-            hpfs_[i] = BiquadFilter::create(sampleRate);
+            lpfs_[i] = StateVariableFilter::create(sampleRate);
+            hpfs_[i] = StateVariableFilter::create(sampleRate);
         }
 
         filter_ = FilterType::NO_FILTER;
+        lpfMix_ = 1.f;
+        hpfMix_ = 0.f;
+        amp_ = 1.f;
     }
     ~DjFilter()
     {
         for (size_t i = 0; i < 2; i++)
         {
-            BiquadFilter::destroy(lpfs_[i]);
-            BiquadFilter::destroy(hpfs_[i]);
+            StateVariableFilter::destroy(lpfs_[i]);
+            StateVariableFilter::destroy(hpfs_[i]);
         }
     }
 
@@ -77,6 +82,7 @@ public:
             lpfMix_ = Map(value, 0.f, 0.45f, 0.f, 1.f);
             freq_ = Map(lpfMix_, 0.f, 1.f, 500.f, 2000.f);
             UpdateFilter();
+            amp_ = Map(lpfMix_, 0.f, 1.f, kDjFilterMakeupGainMax, kDjFilterMakeupGainMin);
         }
         else if (value >= 0.55f)
         {
@@ -84,6 +90,7 @@ public:
             hpfMix_ = Map(value, 0.55f, 1.f, 0.f, 1.f);
             freq_ = Map(hpfMix_, 0.f, 1.f, 1000.f, 4000.f);
             UpdateFilter();
+            amp_ = Map(hpfMix_, 0.f, 1.f, kDjFilterMakeupGainMin, kDjFilterMakeupGainMax);
         }
         else
         {
@@ -124,7 +131,7 @@ public:
 
         for (size_t i = 0; i < size; i++)
         {
-            Process(leftIn[i], rightIn[i], leftOut[i], rightOut[i]);
+            Process(leftIn[i] * amp_, rightIn[i] * amp_, leftOut[i], rightOut[i]);
         }
     }
 };
