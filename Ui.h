@@ -281,8 +281,7 @@ public:
             &patchCtrls_->echoFilter,
             &patchCtrls_->echoDensityModAmount,
             &patchCtrls_->echoDensityCvAmount,
-            0.01f,
-            0
+            0.005f
         );
         knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(
             patchState_,

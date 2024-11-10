@@ -144,8 +144,11 @@ const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
 const int32_t kEchoMaxExternalClockSamples = kEchoMaxLengthSamples / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoMakeupGainMin = 0.5f;
-constexpr float kEchoMakeupGainMax = 0.9f;
+constexpr float kEchoInfiniteFeedbackThreshold = 0.999f;
+constexpr float kEchoInfiniteFeedbackLevel = 1.001f;
+constexpr float kEchoCompThresMin = -16;
+constexpr float kEchoCompThresMax = -22;
+constexpr float kEchoMakeupGain = 1.f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;
 constexpr int kAmbienceNofDiffusers = 4;
