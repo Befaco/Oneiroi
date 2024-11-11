@@ -38,7 +38,7 @@ public:
         return s_;
     }
 
-    void setFrequency(float freq)
+    void setFrequency(float freq) override
     {
 
     }

@@ -27,7 +27,7 @@ private:
     HysteresisQuantizer densityQuantizer_;
 
     int echoDensityRatio_;
-    float echoDensity_, oldDensity_;
+    float echoDensity_;
 
     float levels_[kEchoTaps] = {}, outs_[kEchoTaps] = {};
     float tapsTimes_[kEchoTaps] = {}, newTapsTimes_[kEchoTaps] = {}, maxTapsTimes_[kEchoTaps] = {};
@@ -244,7 +244,7 @@ public:
         SetRepeats(r);
 
         float x = 0;
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < size; i++)
         {
             if (fade_)
             {

@@ -1053,7 +1053,7 @@ private:
 
     bool mainOn_;
     bool funcOn_;
-    bool latched_;
+    // bool latched_;
     bool hold_;
     bool pressed_;
     bool trig_;
@@ -1362,7 +1362,7 @@ public:
         pressed_ = pressed;
 
         // Act only when the led button is pressed.
-        if (FuncMode::FUNC_MODE_NONE == funcMode_ && !pressed_ || FuncMode::FUNC_MODE_NONE != funcMode_ && pressed_)
+        if ((FuncMode::FUNC_MODE_NONE == funcMode_ && !pressed_) || (FuncMode::FUNC_MODE_NONE != funcMode_ && pressed_))
         {
             Set(!*on_);
             trig_ = true;

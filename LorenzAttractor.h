@@ -128,7 +128,7 @@ public:
         return s_;
     }
 
-    void setFrequency(float freq)
+    void setFrequency(float freq) override
     {
         freq *= 0.5f;
         t_ = 1.f / (sampleRate_ / Clamp(freq, 0.001, 10.f));

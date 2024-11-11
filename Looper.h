@@ -53,7 +53,7 @@ private:
     Lut<int, 128> startLUT_;
     Lut<int, 128> lengthLUT_;
 
-    const int kLooperFadeSamples;
+    const uint32_t kLooperFadeSamples;
     const float kLooperFadeSamplesR;
 
     void MapSpeed()
@@ -330,7 +330,7 @@ public:
         // VCV change: moved LUT constructors and other constants here to be sample rate dependent
         startLUT_ (0, kLooperChannelBufferLength - 1),
         lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<int, 128>::Type::LUT_TYPE_EXPO),
-        kLooperFadeSamples(kLooperFade * patchState->sampleRate),
+        kLooperFadeSamples(kLooperFadeSeconds * patchState->sampleRate),
         kLooperFadeSamplesR(1.f / kLooperFadeSamples)
     {
         patchCtrls_ = patchCtrls;

@@ -28,9 +28,9 @@ public:
         dur_ = dur;
     }
 
-    float Process(float trig)
+    bool Process(float trig)
     {
-        float out = 0;
+        bool out = false;
 
         if (trig != 0)
         {
@@ -39,7 +39,7 @@ public:
 
         if (timer_ != 0)
         {
-            out = 1.0f;
+            out = true;
             timer_--;
         }
 

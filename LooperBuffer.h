@@ -24,15 +24,19 @@ private:
 
     DcBlockingFilter* dc_[2];
 
-    const int32_t kLooperTotalBufferLength;
-    const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
-    const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
+    const uint32_t kLooperTotalBufferLength;
+    const uint32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
+    const uint32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
+    const uint32_t kLooperFadeSamples;
+    const float kLooperFadeSamplesR;
     int writeFadeIndex_;
     bool writeFadeIn_, writeFadeOut_;
 
 public:
     LooperBuffer(float sampleRate) : 
-        kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds)
+        kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds), 
+        kLooperFadeSamples(sampleRate * kLooperFadeSeconds),
+        kLooperFadeSamplesR(1.f / kLooperFadeSamples)
     {
         buffer_ = FloatArray::create(kLooperTotalBufferLength);
         buffer_.noise();

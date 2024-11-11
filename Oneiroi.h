@@ -137,7 +137,7 @@ public:
 
         inputDcFilter_->process(buffer, buffer);
 
-        const int size = buffer.getSize();
+        const size_t size = buffer.getSize();
 
         // Input leds.
         for (size_t i = 0; i < size; i++)
