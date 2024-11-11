@@ -103,10 +103,13 @@ private:
             }
             echoDensityRatio_ = newRatio;
 
-            float d = kModClockRatios[echoDensityRatio_] * patchState_->tempo->getPeriodInSamples() * kEchoExternalClockMultiplier;
+            float d = kModClockRatios[echoDensityRatio_] * patchState_->clockSamples * kEchoExternalClockMultiplier;
+            size_t s = kEchoFadeSamples;
+            ParameterInterpolator densityParam(&oldDensity_, d, s);
+
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, d * kEchoTapsRatios[i]);
+                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
             }
 
             // Reset max tap time the next time (...) the clock switches to internal.
@@ -129,10 +132,13 @@ private:
 
             echoDensity_ = value;
 
-            float d = MapExpo(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->tempo->getPeriodInSamples() * kEchoInternalClockMultiplier);
+            float d = MapExpo(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->clockSamples * kEchoInternalClockMultiplier);
+            size_t s = kEchoFadeSamples;
+            ParameterInterpolator densityParam(&oldDensity_, d, s);
+
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, d * kEchoTapsRatios[i]);
+                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
             }
         }
     }
@@ -205,8 +211,6 @@ public:
         SetFilter(patchCtrls_->echoFilter);
 
         float d = Modulate(patchCtrls_->echoDensity, patchCtrls_->echoDensityModAmount, patchState_->modValue, patchCtrls_->echoDensityCvAmount, patchCvs_->echoDensity, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        size_t s = kEchoFadeSamples;
-        ParameterInterpolator densityParam(&oldDensity_, d, s);
 
         float r = Modulate(patchCtrls_->echoRepeats, patchCtrls_->echoRepeatsModAmount, patchState_->modValue, patchCtrls_->echoRepeatsCvAmount, patchCvs_->echoRepeats, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetRepeats(r);
@@ -214,7 +218,7 @@ public:
         float x = 0;
         for (int i = 0; i < size; i++)
         {
-            SetDensity(densityParam.Next());
+            SetDensity(d);
 
             outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(newTapsTimes_[TAP_LEFT_A]); // A
             outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(newTapsTimes_[TAP_LEFT_B]); // B
