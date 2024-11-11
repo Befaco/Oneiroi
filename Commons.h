@@ -77,7 +77,7 @@ static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for b
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
 constexpr float kLooperNoiseLevel = 0.3f;
 constexpr float kLooperInputGain = 1.f;
-constexpr float kLooperResampleGain = 1.4f;
+constexpr float kLooperResampleGain = 1.f;
 constexpr float kLooperResampleLedAtt = 0.8f;
 constexpr float kLooperMakeupGain = 1.2f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
@@ -104,6 +104,7 @@ constexpr int kClockNofRatios = 17;
 constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
+constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples required to detect a change
 
 constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
@@ -300,6 +301,7 @@ struct PatchState
     bool syncIn;
     bool clockReset;
     bool clockTick;
+    size_t clockSamples;
 
     bool clearLooperFlag;
     bool oscPitchCenterFlag;

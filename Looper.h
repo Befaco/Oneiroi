@@ -131,7 +131,6 @@ private:
         {
             newEnd_ -= kLooperChannelBufferLength;
         }
-        //looping_ = (newStart_ > 0) && (newLength_ < kLooperChannelBufferLength -1);
         looping_ = newLength_ < kLooperChannelBufferLength -1;
     }
 
@@ -232,17 +231,35 @@ private:
                     float leftTail;
                     float rightTail;
 
+                    int32_t start, newStart;
                     if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
                     {
-                        buffer_->Read(end_ + loopFadePhase_, newEnd_ + newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        start = start_ - kLooperFadeSamples;
+                        if (start < 0)
+                        {
+                            start += kLooperChannelBufferLength;
+                        }
+                        newStart = newStart_ - kLooperFadeSamples;
+                        if (newStart < 0)
+                        {
+                            newStart += kLooperChannelBufferLength;
+                        }
+                        buffer_->Read(start + loopFadePhase_, newStart + newLoopFadePhase_, x, leftTail, rightTail, direction_);
                     }
-                    else if (PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                    else
                     {
-                        buffer_->Read(start_ + kLooperFadeSamples - loopFadePhase_, newStart_ + kLooperFadeSamples - newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        start = end_ + kLooperFadeSamples;
+                        if (start >= kLooperChannelBufferLength)
+                        {
+                            start -= kLooperChannelBufferLength;
+                        }
+                        newStart = newEnd_ + kLooperFadeSamples;
+                        if (newStart >= kLooperChannelBufferLength)
+                        {
+                            newStart -= kLooperChannelBufferLength;
+                        }
+                        buffer_->Read(start - loopFadePhase_, newStart - newLoopFadePhase_, x, leftTail, rightTail, direction_);
                     }
-
-                    left = leftTail * fadeVolume_ + left * (1.f - fadeVolume_);
-                    right = rightTail * fadeVolume_ + right * (1.f - fadeVolume_);
 
                     loopFadePhase_ += fabs(speed_);
                     fadeVolume_ = loopFadePhase_ * kLooperFadeSamplesR;
@@ -264,18 +281,24 @@ private:
                 }
 
                 phase_ += speed_;
-                if (phase_ >= length_)
+                if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
                 {
-                    phase_ -= length_;
-                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                    if (phase_ >= length_)
+                    {
+                        phase_ -= length_;
+                    }
+                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples && phase_ >= length_ - kLooperFadeSamples)
                     {
                         crossFade_ = true;
                     }
                 }
-                if (phase_ < 0)
+                else
                 {
-                    phase_ += length_;
-                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples)
+                    if (phase_ < 0)
+                    {
+                        phase_ += length_;
+                    }
+                    if (looping_ && !crossFade_ && length_ > kLooperFadeSamples && phase_ <= kLooperFadeSamples)
                     {
                         crossFade_ = true;
                     }
@@ -421,7 +444,6 @@ public:
         }
         else if (!patchCtrls_->looperRecording && recording_ && !buffer_->IsFadingOutWrite())
         {
-            recording_ = false;
             buffer_->FadeOutWrite();
         }
 
