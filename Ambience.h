@@ -477,15 +477,6 @@ public:
 
     void process(AudioBuffer &input, AudioBuffer &output)
     {
-        /*
-        if (patchCtrls_->ambienceVol < 0.01f)
-        {
-            output = input;
-
-            return;
-        }
-        */
-
         size_t size = output.getSize();
         FloatArray leftIn = input.getSamples(LEFT_CHANNEL);
         FloatArray rightIn = input.getSamples(RIGHT_CHANNEL);

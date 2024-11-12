@@ -3,6 +3,7 @@
 #include "Commons.h"
 #include "TapTempo.h"
 #include "Schmitt.h"
+// #include "MovingAverage.h"
 
 class Clock
 {
@@ -83,6 +84,12 @@ public:
             // Switch to the external clock.
             patchState_->clockSource = ClockSource::CLOCK_SOURCE_EXTERNAL;
             patchState_->clockReset = true;
+        }
+
+        size_t s = patchState_->tempo->getPeriodInSamples();
+        if (fabs(patchState_->clockSamples - s) > kClockTempoSamplesMin)
+        {
+            patchState_->clockSamples = s;
         }
 
         patchState_->clockTick = trigger_.Process(patchState_->tempo->isOn());

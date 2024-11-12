@@ -4,7 +4,9 @@
 #include "DelayLine.h"
 #include "EnvFollower.h"
 #include "SineOscillator.h"
+#include "ParameterInterpolator.h"
 #include "DjFilter.h"
+#include "Compressor.h"
 #include <stdint.h>
 
 enum EchoTap
@@ -21,21 +23,20 @@ private:
     PatchCtrls* patchCtrls_;
     PatchCvs* patchCvs_;
     PatchState* patchState_;
+
     DelayLine* lines_[kEchoTaps];
     DjFilter* filter_;
     EnvFollower* ef_[2];
+    Compressor* comp_[2];
+
     HysteresisQuantizer densityQuantizer_;
 
     int echoDensityRatio_;
-    float echoDensity_;
+    float echoDensity_, oldDensity_;
 
     float levels_[kEchoTaps] = {}, outs_[kEchoTaps] = {};
     float tapsTimes_[kEchoTaps] = {}, newTapsTimes_[kEchoTaps] = {}, maxTapsTimes_[kEchoTaps] = {};
-    float amp_, repeats_, filterValue_;
-
-    float fadeInc_;
-    int fadeIndex_;
-    bool fade_;
+    float repeats_, filterValue_;
 
     bool externalClock_;
     bool infinite_;
@@ -64,13 +65,6 @@ private:
         filter_->SetFilter(value);
     }
 
-    void SetAmp()
-    {
-        // Amp is reduced when repeats_ = 1 and echoDensity_ = 0
-        //amp_ = MapExpo(echoDensity_, 0.f, 1.f, kEchoMakeupGainMin, kEchoMakeupGainMax) * MapExpo(repeats_, 0.f, 1.f, kEchoMakeupGainMax, kEchoMakeupGainMin);
-        amp_ = MapExpo(repeats_, 0.f, 1.f, kEchoMakeupGainMax, kEchoMakeupGainMin);
-    }
-
     void SetRepeats(float value)
     {
         repeats_ = value;
@@ -80,9 +74,9 @@ private:
         infinite_ = false;
 
         // Infinite feedback.
-        if (r > kResoInfiniteFeedbackThreshold)
+        if (r > kEchoInfiniteFeedbackThreshold)
         {
-            r = kResoInfiniteFeedbackLevel;
+            r = kEchoInfiniteFeedbackLevel;
             infinite_ = true;
         }
         else if (r > 0.99f)
@@ -95,18 +89,13 @@ private:
         SetLevel(TAP_RIGHT_A, r * kEchoTapsFeedbacks[TAP_RIGHT_A]);
         SetLevel(TAP_RIGHT_B, r * kEchoTapsFeedbacks[TAP_RIGHT_B]);
 
-        SetAmp();
+        float thrs = Map(repeats_, 0.f, 1.f, kEchoCompThresMin, kEchoCompThresMax);
+        comp_[LEFT_CHANNEL]->setThreshold(thrs);
+        comp_[RIGHT_CHANNEL]->setThreshold(-thrs);
     }
 
     void SetDensity(float value)
     {
-        if (fade_)
-        {
-            return;
-        }
-
-        fade_ = true;
-
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
         {
             int newRatio = densityQuantizer_.Process(value);
@@ -116,10 +105,13 @@ private:
             }
             echoDensityRatio_ = newRatio;
 
-            float d = kModClockRatios[echoDensityRatio_] * patchState_->tempo->getPeriodInSamples() * kEchoExternalClockMultiplier;
+            float d = kModClockRatios[echoDensityRatio_] * patchState_->clockSamples * kEchoExternalClockMultiplier;
+            size_t s = kEchoFadeSamples;
+            ParameterInterpolator densityParam(&oldDensity_, d, s);
+
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, d * kEchoTapsRatios[i]);
+                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
             }
 
             // Reset max tap time the next time (...) the clock switches to internal.
@@ -140,22 +132,17 @@ private:
                 externalClock_ = false;
             }
 
-            // Removes some noise when repeats is raised (compromising
-            // smoothness, though).
-            if (fabsf(value - echoDensity_) < 0.001f * repeats_)
-            {
-                return;
-            }
             echoDensity_ = value;
 
-            float d = Map(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->tempo->getPeriodInSamples() * kEchoInternalClockMultiplier);
+            float d = MapExpo(echoDensity_, 0.f, 1.f, kEchoMinLengthSamples, patchState_->clockSamples * kEchoInternalClockMultiplier);
+            size_t s = kEchoFadeSamples;
+            ParameterInterpolator densityParam(&oldDensity_, d, s);
+
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, d * kEchoTapsRatios[i]);
+                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
             }
         }
-
-        SetAmp();
     }
 
 public:
@@ -177,19 +164,18 @@ public:
             outs_[i] = 0;
         }
 
-        echoDensity_ = 1.f;
+        echoDensity_ = oldDensity_ = 1.f;
         echoDensityRatio_ = 0;
-        amp_ = 1.4f;
-        fadeInc_ = 1.f / kEchoFadeSamples;
-        fadeIndex_ = 0;
-        fade_ = false;
 
         externalClock_ = false;
         infinite_ = false;
 
         filter_ = DjFilter::create(patchState_->sampleRate);
+
         for (size_t i = 0; i < 2; i++)
         {
+            comp_[i] = Compressor::create(patchState_->sampleRate);
+            comp_[i]->setThreshold(-20);
             ef_[i] = EnvFollower::create();
         }
 
@@ -204,6 +190,7 @@ public:
         DjFilter::destroy(filter_);
         for (size_t i = 0; i < 2; i++)
         {
+            Compressor::destroy(comp_[i]);
             EnvFollower::destroy(ef_[i]);
         }
     }
@@ -220,15 +207,6 @@ public:
 
     void process(AudioBuffer &input, AudioBuffer &output)
     {
-        /*
-        if (patchCtrls_->echoVol < 0.01f)
-        {
-            output = input;
-
-            return;
-        }
-        */
-
         size_t size = output.getSize();
         FloatArray leftIn = input.getSamples(LEFT_CHANNEL);
         FloatArray rightIn = input.getSamples(RIGHT_CHANNEL);
@@ -238,33 +216,18 @@ public:
         SetFilter(patchCtrls_->echoFilter);
 
         float d = Modulate(patchCtrls_->echoDensity, patchCtrls_->echoDensityModAmount, patchState_->modValue, patchCtrls_->echoDensityCvAmount, patchCvs_->echoDensity, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        SetDensity(d);
 
         float r = Modulate(patchCtrls_->echoRepeats, patchCtrls_->echoRepeatsModAmount, patchState_->modValue, patchCtrls_->echoRepeatsCvAmount, patchCvs_->echoRepeats, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetRepeats(r);
-
-        float x = 0;
+        
         for (size_t i = 0; i < size; i++)
         {
-            if (fade_)
-            {
-                x = fadeIndex_ * fadeInc_;
-                fadeIndex_++;
-                if (fadeIndex_ >= kEchoFadeSamples)
-                {
-                    fadeIndex_ = 0;
-                    fade_ = false;
-                    for (size_t j = 0; j < kEchoTaps; j++)
-                    {
-                        tapsTimes_[j] = newTapsTimes_[j];
-                    }
-                }
-            }
+            SetDensity(d);
 
-            outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(tapsTimes_[TAP_LEFT_A], newTapsTimes_[TAP_LEFT_A], x); // A
-            outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(tapsTimes_[TAP_LEFT_B], newTapsTimes_[TAP_LEFT_B], x); // B
-            outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(tapsTimes_[TAP_RIGHT_A], newTapsTimes_[TAP_RIGHT_A], x); // A
-            outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B], newTapsTimes_[TAP_RIGHT_B], x); // B
+            outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(newTapsTimes_[TAP_LEFT_A]); // A
+            outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(newTapsTimes_[TAP_LEFT_B]); // B
+            outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(newTapsTimes_[TAP_RIGHT_A]); // A
+            outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(newTapsTimes_[TAP_RIGHT_B]); // B
 
             float leftFb = HardClip(outs_[TAP_LEFT_A] * levels_[TAP_LEFT_A] + outs_[TAP_RIGHT_A] * levels_[TAP_RIGHT_A]);
             float rightFb = HardClip(outs_[TAP_LEFT_B] * levels_[TAP_LEFT_B] + outs_[TAP_RIGHT_B] * levels_[TAP_RIGHT_B]);
@@ -294,8 +257,11 @@ public:
             float left = Mix2(outs_[TAP_LEFT_A], outs_[TAP_LEFT_B]);
             float right = Mix2(outs_[TAP_RIGHT_A], outs_[TAP_RIGHT_B]);
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left * amp_, patchCtrls_->echoVol, 1.8f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right * amp_, patchCtrls_->echoVol, 1.8f);
+            left = comp_[LEFT_CHANNEL]->process(left) * kEchoMakeupGain;
+            right = comp_[RIGHT_CHANNEL]->process(right) * kEchoMakeupGain;
+
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->echoVol, 1.8f);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->echoVol, 1.8f);
         }
     }
 };

@@ -326,15 +326,6 @@ public:
 
     void process(AudioBuffer &input, AudioBuffer &output)
     {
-        /*
-        if (patchCtrls_->filterVol < 0.01f)
-        {
-            output = input;
-
-            return;
-        }
-        */
-
         size_t size = output.getSize();
 
         FloatArray leftIn = input.getSamples(LEFT_CHANNEL);

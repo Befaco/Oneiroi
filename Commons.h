@@ -71,6 +71,7 @@ constexpr float kOscFreqMax = 8219.f; // C9
 
 constexpr float kLooperLoopLengthMinSeconds = 1.0 / 130.813f; // C3 = 130.81Hz
 constexpr float kLooperFadeSeconds = 0.05; // 50ms @ audio rate
+constexpr float kLooperTriggerFadeSeconds = 0.005; // 5ms @ audio rate
 static const float kLooperTotalBufferLengthSeconds = (1 << 19) / 48000.; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengthSeconds / 2;
 // static const float kLooperFadeInc = 1.f / kLooperFadeSamples;
@@ -79,7 +80,7 @@ static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengt
 // static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
 constexpr float kLooperNoiseLevel = 0.3f;
 constexpr float kLooperInputGain = 1.f;
-constexpr float kLooperResampleGain = 1.4f;
+constexpr float kLooperResampleGain = 1.f;
 constexpr float kLooperResampleLedAtt = 0.8f;
 constexpr float kLooperMakeupGain = 1.2f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
@@ -103,6 +104,7 @@ constexpr int kClockNofRatios = 17;
 constexpr int kClockUnityRatio = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
+constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples required to detect a change
 
 constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
@@ -143,8 +145,11 @@ const float kEchoTapsFeedbacks[kEchoTaps] = { 0.35f, 0.65f, 0.55f, 0.45f };
 const float kEchoMaxExternalClock = kEchoMaxLength / kModClockRatios[kClockNofRatios - 1]; // Maximum period for the external clock
 constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
-constexpr float kEchoMakeupGainMin = 0.5f;
-constexpr float kEchoMakeupGainMax = 0.9f;
+constexpr float kEchoInfiniteFeedbackThreshold = 0.999f;
+constexpr float kEchoInfiniteFeedbackLevel = 1.001f;
+constexpr float kEchoCompThresMin = -16;
+constexpr float kEchoCompThresMax = -22;
+constexpr float kEchoMakeupGain = 1.f;
 
 constexpr int32_t kAmbienceLengthSeconds = 1.f;
 constexpr int kAmbienceNofDiffusers = 4;
@@ -298,6 +303,7 @@ struct PatchState
     bool syncIn;
     bool clockReset;
     bool clockTick;
+    size_t clockSamples;
 
     bool clearLooperFlag;
     bool oscPitchCenterFlag;

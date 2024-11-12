@@ -154,6 +154,7 @@ public:
         patchState_->outLevel = 1.f;
         patchState_->randomSlew = kRandomSlewSamples;
         patchState_->randomHasSlew = false;
+        patchState_->clockSamples = 0;
 
         // Alt params
         patchCtrls_->looperSos = 0.f;
@@ -286,8 +287,7 @@ public:
             &patchCtrls_->echoFilter,
             &patchCtrls_->echoDensityModAmount,
             &patchCtrls_->echoDensityCvAmount,
-            0.01f,
-            0
+            0.005f
         );
         knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(
             patchState_,
