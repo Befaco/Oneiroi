@@ -103,7 +103,7 @@ constexpr float kClockFreqMax = 80.f;
 constexpr int kExternalClockLimit = 3000; // Samples required to detect a steady external clock - 2s (1500 = 1s @ block rate)
 static const float kInternalClockFreq = (48000.f / kLooperChannelBufferLength);
 constexpr int kClockNofRatios = 17;
-constexpr int kClockUnityRatio = 9;
+constexpr int kClockUnityRatioIndex = 9;
 static const float kModClockRatios[kClockNofRatios] = { 0.015625f, 0.03125f, 0.0625f, 0.125f, 0.2f, 0.25f, 0.33f, 0.5f, 1, 2, 3, 4, 5, 8, 16, 32, 64};
 static const float kRModClockRatios[kClockNofRatios] = { 64, 32, 16, 8, 5, 4, 3, 2, 1, 0.5f, 0.33f, 0.25f, 0.2f, 0.125f, 0.0625f, 0.03125f, 0.015625f};
 constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples required to detect a change
@@ -138,7 +138,7 @@ constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kResoInfiniteFeedbackLevel = 1.001f;
 
-constexpr int32_t kEchoFadeSamples = 7200; // 150 ms @ audio rate
+constexpr int32_t kEchoFadeSamples = 2400; // 50 ms @ audio rate
 constexpr int32_t kEchoMinLengthSamples = 480; // 10 ms @ audio rate
 constexpr int32_t kEchoMaxLengthSamples = 192000; // 4 seconds @ audio rate
 constexpr int kEchoTaps = 4;

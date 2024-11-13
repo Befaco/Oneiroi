@@ -31,7 +31,7 @@ private:
 
     HysteresisQuantizer densityQuantizer_;
 
-    int echoDensityRatio_;
+    int clockRatiosIndex_;
     float echoDensity_, oldDensity_;
 
     float levels_[kEchoTaps], outs_[kEchoTaps];
@@ -97,14 +97,14 @@ private:
     {
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
         {
-            int newRatio = densityQuantizer_.Process(value);
-            if (newRatio == echoDensityRatio_ && externalClock_)
+            int newIndex = densityQuantizer_.Process(value);
+            if (newIndex == clockRatiosIndex_ && externalClock_)
             {
                 return;
             }
-            echoDensityRatio_ = newRatio;
+            clockRatiosIndex_ = newIndex;
 
-            float d = kModClockRatios[echoDensityRatio_] * patchState_->clockSamples * kEchoExternalClockMultiplier;
+            float d = kModClockRatios[clockRatiosIndex_] * patchState_->clockSamples * kEchoExternalClockMultiplier;
             for (size_t i = 0; i < kEchoTaps; i++)
             {
                 SetTapTime(i, d * kEchoTapsRatios[i]);
@@ -158,7 +158,7 @@ public:
         }
 
         echoDensity_ = 1.f;
-        echoDensityRatio_ = 0;
+        clockRatiosIndex_ = 0;
 
         xi_ = 1.f / patchState_->blockSize;
 
@@ -174,7 +174,7 @@ public:
             ef_[i] = EnvFollower::create();
         }
 
-        densityQuantizer_.Init(kClockUnityRatio, 0.15f, false);
+        densityQuantizer_.Init(kClockUnityRatioIndex, 0.15f, false);
     }
     ~Echo()
     {
