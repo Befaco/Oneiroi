@@ -207,7 +207,9 @@ public:
             &patchCtrls_->looperSpeed,
             NULL,
             &patchCtrls_->looperSpeedModAmount,
-            &patchCtrls_->looperSpeedCvAmount
+            &patchCtrls_->looperSpeedCvAmount,
+            0.003f,
+            0
         );
         knobs_[PARAM_KNOB_LOOPER_START] = KnobController::create(
             patchState_,
@@ -215,7 +217,8 @@ public:
             &patchCtrls_->looperSos,
             &patchCtrls_->looperStartModAmount,
             &patchCtrls_->looperStartCvAmount,
-            0.005f
+            0.003f,
+            0
         );
         knobs_[PARAM_KNOB_LOOPER_LENGTH] = KnobController::create(
             patchState_,
@@ -223,7 +226,8 @@ public:
             &patchCtrls_->looperFilter,
             &patchCtrls_->looperLengthModAmount,
             &patchCtrls_->looperLengthCvAmount,
-            0.005f
+            0.003f,
+            0
         );
 
         knobs_[PARAM_KNOB_OSC_PITCH] = KnobController::create(
