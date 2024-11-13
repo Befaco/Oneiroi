@@ -37,6 +37,7 @@ private:
     float levels_[kEchoTaps], outs_[kEchoTaps];
     float tapsTimes_[kEchoTaps], newTapsTimes_[kEchoTaps], maxTapsTimes_[kEchoTaps];
     float repeats_, filterValue_;
+    float xi_;
 
     bool externalClock_;
     bool infinite_;
@@ -89,7 +90,7 @@ private:
 
         float thrs = Map(repeats_, 0.f, 1.f, kEchoCompThresMin, kEchoCompThresMax);
         comp_[LEFT_CHANNEL]->setThreshold(thrs);
-        comp_[RIGHT_CHANNEL]->setThreshold(-thrs);
+        comp_[RIGHT_CHANNEL]->setThreshold(thrs);
     }
 
     void SetDensity(float value)
@@ -97,19 +98,16 @@ private:
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
         {
             int newRatio = densityQuantizer_.Process(value);
-            if (newRatio == echoDensityRatio_ && !externalClock_)
+            if (newRatio == echoDensityRatio_ && externalClock_)
             {
                 return;
             }
             echoDensityRatio_ = newRatio;
 
             float d = kModClockRatios[echoDensityRatio_] * patchState_->clockSamples * kEchoExternalClockMultiplier;
-            size_t s = kEchoFadeSamples;
-            ParameterInterpolator densityParam(&oldDensity_, d, s);
-
             for (size_t i = 0; i < kEchoTaps; i++)
             {
-                SetTapTime(i, densityParam.Next() * kEchoTapsRatios[i]);
+                SetTapTime(i, d * kEchoTapsRatios[i]);
             }
 
             // Reset max tap time the next time (...) the clock switches to internal.
@@ -162,6 +160,8 @@ public:
         echoDensity_ = 1.f;
         echoDensityRatio_ = 0;
 
+        xi_ = 1.f / patchState_->blockSize;
+
         externalClock_ = false;
         infinite_ = false;
 
@@ -211,6 +211,10 @@ public:
         SetFilter(patchCtrls_->echoFilter);
 
         float d = Modulate(patchCtrls_->echoDensity, patchCtrls_->echoDensityModAmount, patchState_->modValue, patchCtrls_->echoDensityCvAmount, patchCvs_->echoDensity, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
+        if (externalClock_)
+        {
+            SetDensity(d);
+        }
 
         float r = Modulate(patchCtrls_->echoRepeats, patchCtrls_->echoRepeatsModAmount, patchState_->modValue, patchCtrls_->echoRepeatsCvAmount, patchCvs_->echoRepeats, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetRepeats(r);
@@ -218,12 +222,30 @@ public:
         float x = 0;
         for (int i = 0; i < size; i++)
         {
-            SetDensity(d);
+            // Using crossfade between two different tap times when the clock is
+            // external and a filtered density param for when the clock is
+            // internal (for pitch shifting effect).
+            if (externalClock_)
+            {
+                outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(tapsTimes_[TAP_LEFT_A], newTapsTimes_[TAP_LEFT_A], x); // A
+                outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(tapsTimes_[TAP_LEFT_B], newTapsTimes_[TAP_LEFT_B], x); // B
+                outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(tapsTimes_[TAP_RIGHT_A], newTapsTimes_[TAP_RIGHT_A], x); // A
+                outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B], newTapsTimes_[TAP_RIGHT_B], x); // B
 
-            outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(newTapsTimes_[TAP_LEFT_A]); // A
-            outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(newTapsTimes_[TAP_LEFT_B]); // B
-            outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(newTapsTimes_[TAP_RIGHT_A]); // A
-            outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(newTapsTimes_[TAP_RIGHT_B]); // B
+                x += xi_;
+                if (x >= size)
+                {
+                    x = 0;
+                }
+            }
+            else
+            {
+                SetDensity(d);
+                outs_[TAP_LEFT_A] = lines_[TAP_LEFT_A]->read(newTapsTimes_[TAP_LEFT_A]); // A
+                outs_[TAP_LEFT_B] = lines_[TAP_LEFT_B]->read(newTapsTimes_[TAP_LEFT_B]); // B
+                outs_[TAP_RIGHT_A] = lines_[TAP_RIGHT_A]->read(newTapsTimes_[TAP_RIGHT_A]); // A
+                outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(newTapsTimes_[TAP_RIGHT_B]); // B
+            }
 
             float leftFb = HardClip(outs_[TAP_LEFT_A] * levels_[TAP_LEFT_A] + outs_[TAP_RIGHT_A] * levels_[TAP_RIGHT_A]);
             float rightFb = HardClip(outs_[TAP_LEFT_B] * levels_[TAP_LEFT_B] + outs_[TAP_RIGHT_B] * levels_[TAP_RIGHT_B]);
@@ -258,6 +280,14 @@ public:
 
             leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->echoVol, 1.8f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->echoVol, 1.8f);
+        }
+
+        if (externalClock_)
+        {
+            for (size_t j = 0; j < kEchoTaps; j++)
+            {
+                tapsTimes_[j] = newTapsTimes_[j];
+            }
         }
     }
 };
