@@ -3,7 +3,6 @@
 #include "Commons.h"
 #include "TapTempo.h"
 #include "Schmitt.h"
-// #include "MovingAverage.h"
 
 class Clock
 {

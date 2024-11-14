@@ -28,7 +28,7 @@ private:
 
     float wPhase_;
     float phase_, newPhase_;
-    float speed_, newSpeed_;
+    float speed_;
     float speedValue_;
     float inputGain_, feedback_, loopFadeVolume_, triggerFadeVolume_, speedVolume_;
     float filterValue_;
@@ -40,7 +40,7 @@ private:
     bool loopCrossFade_, triggerFadeOut_, triggerFadeIn_;
     bool recording_;
 
-    float loopCrossFadePhase_, newLoopFadePhase_;
+    float loopCrossFadePhase_;
 
     int triggerFadeIndex_;
 
@@ -127,7 +127,7 @@ private:
             }
         }
 
-        newSpeed_ = value;
+        speed_ = value;
     }
 
     void SetEnd()
@@ -251,7 +251,7 @@ private:
                         {
                             newStart += kLooperChannelBufferLength;
                         }
-                        buffer_->Read(start + loopCrossFadePhase_, newStart + newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        buffer_->Read(start + loopCrossFadePhase_, newStart + loopCrossFadePhase_, x, leftTail, rightTail, direction_);
                     }
                     else
                     {
@@ -265,7 +265,7 @@ private:
                         {
                             newStart -= kLooperChannelBufferLength;
                         }
-                        buffer_->Read(start - loopCrossFadePhase_, newStart - newLoopFadePhase_, x, leftTail, rightTail, direction_);
+                        buffer_->Read(start - loopCrossFadePhase_, newStart - loopCrossFadePhase_, x, leftTail, rightTail, direction_);
                     }
 
                     loopFadeVolume_ = loopCrossFadePhase_ * kLooperFadeSamplesR;
@@ -275,12 +275,6 @@ private:
                         loopCrossFadePhase_ = 0;
                         loopFadeVolume_ = 1.f;
                         loopCrossFade_ = false;
-                    }
-
-                    newLoopFadePhase_ += fabs(newSpeed_);
-                    if (newLoopFadePhase_ >= kLooperFadeSamples)
-                    {
-                        newLoopFadePhase_ = 0;
                     }
 
                     left = leftTail * loopFadeVolume_ + left * (1.f - loopFadeVolume_);
@@ -341,7 +335,7 @@ private:
                     }
                 }
 
-                newPhase_ += newSpeed_;
+                newPhase_ += speed_;
                 if (newPhase_ >= newLength_)
                 {
                     newPhase_ -= newLength_;
@@ -376,8 +370,6 @@ private:
         length_ = newLength_;
         start_ = newStart_;
         end_ = newEnd_;
-        speed_ = newSpeed_;
-        loopCrossFadePhase_ = newLoopFadePhase_;
     }
 
 public:
@@ -407,7 +399,7 @@ public:
         loopFadeVolume_ = 1.f;
         speedVolume_ = 1.f;
         speedValue_ = 0;
-        speed_ = newSpeed_ = 1.f;
+        speed_ = 1.f;
         phase_ = newPhase_ = 0;
         wPhase_ = bufferPhase_ = 0;
         length_ = newLength_ = kLooperChannelBufferLength;
