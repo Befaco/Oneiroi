@@ -517,10 +517,6 @@ public:
             right = diffusers_[RIGHT_CHANNEL]->Process(rightFb, x);
 
             x += xi_;
-            if (x >= size)
-            {
-                x = 0;
-            }
 
             leftOut[i] = CheapEqualPowerCrossFade(lIn, left * amp_, patchCtrls_->ambienceVol, 1.4f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, right * amp_, patchCtrls_->ambienceVol, 1.4f);

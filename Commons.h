@@ -69,19 +69,20 @@ constexpr float kSemi4Oct = 12;
 constexpr float kOscFreqMin = 16.35f; // C0
 constexpr float kOscFreqMax = 8219.f; // C9
 
+constexpr size_t kLooperInterpolationBlocks = 4; // This number * block size = samples
 constexpr int kLooperLoopLengthMin = 367; // Almost C3 (48000 / 130.81f)
-constexpr int kLooperFadeSamples = 2400; // 50ms @ audio rate
+constexpr int kLooperFadeSamples = 4800; // 100ms @ audio rate
 static const float kLooperFadeSamplesR = 1.f / kLooperFadeSamples;
 constexpr int kLooperTriggerFadeSamples = 240; // 5ms @ audio rate
 static const float kLooperTriggerFadeSamplesR = 1.f / kLooperTriggerFadeSamples;
 static const int32_t kLooperTotalBufferLength = 1 << 19; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 //static const int32_t kLooperTotalBufferLength = 480000; // samples for both channels (interleaved) = ~8 seconds stereo buffer
 static const int32_t kLooperChannelBufferLength = kLooperTotalBufferLength / 2;
-constexpr float kLooperNoiseLevel = 0.3f;
+constexpr float kLooperNoiseLevel = 0.2f;
 constexpr float kLooperInputGain = 1.f;
 constexpr float kLooperResampleGain = 1.f;
 constexpr float kLooperResampleLedAtt = 0.8f;
-constexpr float kLooperMakeupGain = 1.2f;
+constexpr float kLooperMakeupGain = 1.3f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 static const int32_t kLooperClearBlockSize = kLooperTotalBufferLength / kLooperClearBlocks;
 static const int32_t kLooperClearBlockTypeSize = kLooperClearBlockSize * 4; // Float
@@ -110,7 +111,7 @@ constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples
 
 constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
-constexpr float kOScSuperSawGain = 0.6f;
+constexpr float kOScSuperSawGain = 0.4f;
 constexpr float kOScWaveTablePreGain = 3.f;
 constexpr float kOScWaveTableGain = 0.2f;
 constexpr float kSourcesMakeupGain = 0.2f;
@@ -315,6 +316,8 @@ struct PatchState
     bool filterModeFlag;
     bool filterPositionFlag;
 
+    bool moving[23];
+
     float c5;
     float pitchZero;
     float speedZero;
@@ -517,6 +520,17 @@ inline float CenterMap(float value, float min = -1.f, float max = 1.f, float cen
     }
 
     return value;
+}
+
+/**
+ * @brief Returns -1 for negative numbers and +1 for positive numbers.
+ *
+ * @param val
+ * @return float
+ */
+inline float Sign(float val)
+{
+    return (0.f < val) - (val < 0.f);
 }
 
 /**

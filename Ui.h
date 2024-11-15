@@ -150,6 +150,11 @@ public:
         patchState_->randomSlew = kRandomSlewSamples;
         patchState_->randomHasSlew = false;
 
+        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
+        {
+            patchState_->moving[i] = false;
+        }
+
         // Alt params
         patchCtrls_->looperSos = 0.f;
         patchCtrls_->looperFilter = 0.55f; // Center is not 0.5
@@ -208,8 +213,7 @@ public:
             NULL,
             &patchCtrls_->looperSpeedModAmount,
             &patchCtrls_->looperSpeedCvAmount,
-            0.003f,
-            0
+            0.005f
         );
         knobs_[PARAM_KNOB_LOOPER_START] = KnobController::create(
             patchState_,
@@ -217,8 +221,7 @@ public:
             &patchCtrls_->looperSos,
             &patchCtrls_->looperStartModAmount,
             &patchCtrls_->looperStartCvAmount,
-            0.003f,
-            0
+            0.005f
         );
         knobs_[PARAM_KNOB_LOOPER_LENGTH] = KnobController::create(
             patchState_,
@@ -226,8 +229,7 @@ public:
             &patchCtrls_->looperFilter,
             &patchCtrls_->looperLengthModAmount,
             &patchCtrls_->looperLengthCvAmount,
-            0.003f,
-            0
+            0.005f
         );
 
         knobs_[PARAM_KNOB_OSC_PITCH] = KnobController::create(
@@ -814,6 +816,7 @@ public:
         {
             CatchUpController* ctrl = (i < PARAM_KNOB_LAST) ? (CatchUpController*)knobs_[i] : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
             bool m = ctrl->Process();
+            patchState_->moving[i] = m;
             if (m && !moving)
             {
                 movingParam_ = ctrl;

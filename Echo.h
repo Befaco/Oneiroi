@@ -220,6 +220,7 @@ public:
         SetRepeats(r);
 
         float x = 0;
+
         for (int i = 0; i < size; i++)
         {
             // Using crossfade between two different tap times when the clock is
@@ -233,10 +234,6 @@ public:
                 outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B], newTapsTimes_[TAP_RIGHT_B], x); // B
 
                 x += xi_;
-                if (x >= size)
-                {
-                    x = 0;
-                }
             }
             else
             {
