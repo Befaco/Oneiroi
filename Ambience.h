@@ -6,6 +6,7 @@
 #include "SineOscillator.h"
 #include "EnvFollower.h"
 #include "DcBlockingFilter.h"
+#include "Compressor.h"
 
 class Damp
 {
@@ -310,7 +311,7 @@ private:
     ReversedBuffer *reversers_[2];
 
     EnvFollower* ef_[2];
-
+    Compressor* comp_[2];
     DcBlockingFilter* dc_[2];
 
     float amp_, pan_, decay_, spaceTime_;
@@ -380,24 +381,20 @@ private:
             if (spaceTime_ < 0.3f)
             {
                 highDamp = Map(spaceTime_, 0.f, 0.3f, kAmbienceHighDampMax, kAmbienceHighDampMin);
-                amp_ = Map(spaceTime_, 0.f, 0.3f, kAmbienceGainMax, kAmbienceGainMid) * kAmbienceMakeupGain;
             }
             else if (spaceTime_ >= 0.3f)
             {
                 lowDamp = Map(spaceTime_, 0.3f, 0.5f, kAmbienceLowDampMin, kAmbienceLowDampMax);
-                amp_ = Map(spaceTime_, 0.3f, 0.5f, kAmbienceGainMid, kAmbienceGainMin) * kAmbienceMakeupGain;
             }
             size = MapExpo(spaceTime_, 0.f, 0.5f, 60.f, 0.1f);
         } else {
             if (spaceTime_ < 0.8f)
             {
                 lowDamp = Map(spaceTime_, 0.5f, 0.8f, kAmbienceLowDampMax, kAmbienceLowDampMin);
-                amp_ = Map(spaceTime_, 0.5f, 0.8f, kAmbienceGainMin, kAmbienceGainMid) * kAmbienceMakeupGain;
             }
             else if (spaceTime_ >= 0.8f)
             {
                 highDamp = Map(spaceTime_, 0.8f, 1.f, kAmbienceHighDampMin, kAmbienceHighDampMax);
-                amp_ = Map(spaceTime_, 0.8f, 1.f, kAmbienceGainMid, kAmbienceGainMax) * kAmbienceMakeupGain;
             }
             size = MapExpo(spaceTime_, 0.5f, 1.f, 0.1f, 60.f);
         }
@@ -434,6 +431,8 @@ public:
             reversers_[i] = ReversedBuffer::create(kAmbienceBufferSize);
             ef_[i] = EnvFollower::create();
             dc_[i] = DcBlockingFilter::create();
+            comp_[i] = Compressor::create(patchState_->sampleRate);
+            comp_[i]->setThreshold(-20);
         }
 
         dampFilters_[LEFT_CHANNEL]->SetHp(112);
@@ -444,7 +443,6 @@ public:
 
         panner_ = SineOscillator::create(patchState_->blockRate);
 
-        amp_ = 2.4f;
         pan_ = 0.5f;
         xi_ = 1.f / patchState_->blockSize;
     }
@@ -457,6 +455,7 @@ public:
             ReversedBuffer::destroy(reversers_[i]);
             EnvFollower::destroy(ef_[i]);
             DcBlockingFilter::destroy(dc_[i]);
+            Compressor::destroy(comp_[i]);
         }
         SineOscillator::destroy(panner_);
     }
@@ -518,8 +517,11 @@ public:
 
             x += xi_;
 
-            leftOut[i] = CheapEqualPowerCrossFade(lIn, left * amp_, patchCtrls_->ambienceVol, 1.4f);
-            rightOut[i] = CheapEqualPowerCrossFade(rIn, right * amp_, patchCtrls_->ambienceVol, 1.4f);
+            left = comp_[LEFT_CHANNEL]->process(left) * kAmbienceMakeupGain;
+            right = comp_[RIGHT_CHANNEL]->process(right) * kAmbienceMakeupGain;
+
+            leftOut[i] = CheapEqualPowerCrossFade(lIn, left, patchCtrls_->ambienceVol, 1.4f);
+            rightOut[i] = CheapEqualPowerCrossFade(rIn, right, patchCtrls_->ambienceVol, 1.4f);
         }
 
         diffusers_[LEFT_CHANNEL]->UpdateDelayTimes();
