@@ -9,6 +9,16 @@
 #include "Schmitt.h"
 #include "MidiMessage.h"
 
+enum StartupPhase
+{
+    STARTUP_1,
+    STARTUP_2,
+    STARTUP_3,
+    STARTUP_4,
+    STARTUP_5,
+    STARTUP_DONE,
+};
+
 enum RandomMode
 {
     RANDOM_ALL,
@@ -82,9 +92,11 @@ private:
 
     HysteresisQuantizer octaveQuantizer_;
 
+    StartupPhase startup_;
+
     int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_, samplesSinceModCvPressed_, samplesSinceRecordInReceived_, samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
 
-    bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, startup_, undoRedo_, doRandomSlew_;
+    bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, undoRedo_, doRandomSlew_;
 
     int lastOctave_, randomizeTask_;
 
@@ -120,10 +132,11 @@ public:
         parameterChangedSinceLastSave_ = false;
         saving_ = false;
         saveFlag_ = false;
-        startup_ = true;
         randomize_ = false;
         undoRedo_ = false;
         doRandomSlew_ = false;
+
+        startup_ = STARTUP_1;
 
         lastOctave_ = 0;
         randomizeTask_ = 0;
@@ -1223,16 +1236,71 @@ public:
         }
     }
 
-    // Called at block rate
-    void Poll()
+    void Startup()
     {
-        if (startup_)
+        switch (startup_)
         {
+        case STARTUP_1:
+        {
+            if (!leds_[LED_RECORD]->IsBlinking())
+            {
+                leds_[LED_RECORD]->Blink(PATCH_VERSION_MAJOR);
+            }
+            leds_[LED_RECORD]->Read();
+            if (!leds_[LED_RECORD]->IsBlinking())
+            {
+                startup_ = STARTUP_2;
+            }
+            return;
+        }
+        case STARTUP_2:
+        {
+            static int i = 0;
+            if (i >= kStartupWaitSamples)
+            {
+                startup_ = STARTUP_3;
+            }
+            i++;
+            return;
+        }
+        case STARTUP_3:
+        {
+            if (!leds_[LED_RANDOM]->IsBlinking())
+            {
+                leds_[LED_RANDOM]->Blink(PATCH_VERSION_MINOR);
+            }
+            leds_[LED_RANDOM]->Read();
+            if (!leds_[LED_RANDOM]->IsBlinking())
+            {
+                startup_ = STARTUP_4;
+            }
+            return;
+        }
+        case STARTUP_4:
+        {
+            static int i = 0;
+            if (i >= kStartupWaitSamples)
+            {
+                startup_ = STARTUP_5;
+            }
+            i++;
+            return;
+        }
+        case STARTUP_5:
             LoadMainParams();
             LoadAltParams();
             LoadModParams();
             LoadCvParams();
-            startup_ = false;
+            startup_ = STARTUP_DONE;
+        }
+    }
+
+    // Called at block rate
+    void Poll()
+    {
+        if (StartupPhase::STARTUP_DONE != startup_)
+        {
+            Startup();
 
             return;
         }

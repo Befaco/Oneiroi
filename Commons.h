@@ -10,7 +10,8 @@
 //#define USE_RECORD_THRESHOLD
 #define MAX_PATCH_SETTINGS 16 // Max number of available MIDI channels
 #define PATCH_SETTINGS_NAME "oneiroi"
-#define PATCH_VERSION "v1.0"
+#define PATCH_VERSION_MAJOR 1
+#define PATCH_VERSION_MINOR 1
 
 // Taken from pichenettes' stmlib.
 #define CONSTRAIN(var, min, max) \
@@ -60,6 +61,8 @@ constexpr float kCvOffset = -0.46035f;
 constexpr float kCvMult = 1.485f;
 constexpr float kCvDelta = 0.02f;
 constexpr float kCvMinThreshold = 0.007f;
+
+constexpr int kStartupWaitSamples = 450; // 300ms (1500 = 1s @ block rate)
 
 constexpr int kRandomSlewSamples = 128;
 
@@ -160,7 +163,11 @@ constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;
 constexpr float kAmbienceHighDampMax = -40.f;
-constexpr float kAmbienceMakeupGain = 1.f;
+constexpr float kAmbienceGainMin = 1.f;
+constexpr float kAmbienceGainMax = 1.2f;
+constexpr float kAmbienceRevGainMin = 1.4f;
+constexpr float kAmbienceRevGainMax = 1.2f;
+constexpr float kAmbienceMakeupGain = 1.2f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
 constexpr float kOutputMakeupGain = 6.f;

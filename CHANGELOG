@@ -25,6 +25,8 @@
 - Better fade when looper is triggered
 - Fixed clicking of echo's density when sync'd
 - Added compressors to echo and ambience
+- Displaying patch version with LEDs
+- Fixed ambience's reverse spacetime
 
 ## 1.0 (2024-07-16)
 

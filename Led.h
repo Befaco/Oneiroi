@@ -107,6 +107,11 @@ public:
         return value_;
     }
 
+    inline bool IsBlinking()
+    {
+        return blinks_ > 0;
+    }
+
     /**
      * @brief Blink the led.
      *
