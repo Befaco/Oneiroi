@@ -132,8 +132,8 @@ constexpr float kFilterBpGainMax = 1.6f;
 constexpr float kFilterCombGainMin = 0.1f;
 constexpr float kFilterCombGainMax = 0.2f;
 
-constexpr float kResoGainMin = 0.7f;
-constexpr float kResoGainMax = 0.9f;
+constexpr float kResoGainMin = 0.5f;
+constexpr float kResoGainMax = 1.2f;
 constexpr float kResoMakeupGain = 1.f;
 constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
@@ -150,8 +150,8 @@ constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
 constexpr float kEchoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kEchoInfiniteFeedbackLevel = 1.001f;
-constexpr float kEchoCompThresMin = -16;
-constexpr float kEchoCompThresMax = -22;
+constexpr int kEchoCompThresMin = -16;
+constexpr int kEchoCompThresMax = -22;
 constexpr float kEchoMakeupGain = 1.2f;
 
 constexpr int32_t kAmbienceBufferSize = 48000;

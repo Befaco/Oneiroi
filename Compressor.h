@@ -16,7 +16,7 @@ private:
     float release_;
 
     // Internal variables
-    float thrlin_;
+    float thrlin_, thrlinr_;
     float cteAT_;
     float cteRL_;
 
@@ -50,8 +50,14 @@ public:
 
     void setThreshold(float value)
     {
+        if (fabs(value - threshold_) < 1.f)
+        {
+            return;
+        }
+
         threshold_ = value;
         thrlin_ = Db2A(threshold_);
+        thrlinr_ = 1.f / thrlin_;
     }
 
     void setRatio(float value)
@@ -74,7 +80,7 @@ public:
 
     float process(float input)
     {
-        float leftSideInput = abs(input);
+        float leftSideInput = fabs(input);
 
         // Ballistics filter and envelope generation
         float leftCte = (leftSideInput >= leftS1_ ? cteAT_ : cteRL_);
@@ -82,7 +88,7 @@ public:
         leftS1_ = leftEnv;
 
         // Compressor transfer function
-        float leftCv = (leftEnv <= thrlin_ ? 1.f : fast_powf(leftEnv / thrlin_, expo_));
+        float leftCv = (leftEnv <= thrlin_ ? 1.f : fast_powf(leftEnv * thrlinr_, expo_));
 
         // Processing
         return input * leftCv;

@@ -170,7 +170,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             comp_[i] = Compressor::create(patchState_->sampleRate);
-            comp_[i]->setThreshold(-20);
+            comp_[i]->setThreshold(-16);
             ef_[i] = EnvFollower::create();
         }
 
