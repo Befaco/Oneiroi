@@ -10,7 +10,8 @@
 //#define USE_RECORD_THRESHOLD
 #define MAX_PATCH_SETTINGS 16 // Max number of available MIDI channels
 #define PATCH_SETTINGS_NAME "oneiroi"
-#define PATCH_VERSION "v1.0"
+#define PATCH_VERSION_MAJOR 1
+#define PATCH_VERSION_MINOR 1
 
 // Taken from pichenettes' stmlib.
 #define CONSTRAIN(var, min, max) \
@@ -61,6 +62,8 @@ constexpr float kCvMult = 1.485f;
 constexpr float kCvDelta = 0.02f;
 constexpr float kCvMinThreshold = 0.f;
 
+constexpr int kStartupWaitSamples = 450; // 300ms (1500 = 1s @ block rate)
+
 constexpr int kRandomSlewSamples = 128;
 
 constexpr float kA4Freq = 440.f;
@@ -69,8 +72,9 @@ constexpr float kSemi4Oct = 12;
 constexpr float kOscFreqMin = 16.35f; // C0
 constexpr float kOscFreqMax = 8219.f; // C9
 
+constexpr size_t kLooperInterpolationBlocks = 4; // This number * block size = samples
 constexpr float kLooperLoopLengthMinSeconds = 1.0 / 130.813f; // C3 = 130.81Hz
-constexpr float kLooperFadeSeconds = 0.05; // 50ms @ audio rate
+constexpr float kLooperFadeSeconds = 0.1; // 100ms @ audio rate
 constexpr float kLooperTriggerFadeSeconds = 0.005; // 5ms @ audio rate
 static const float kLooperTotalBufferLengthSeconds = (1 << 19) / 48000.; // 524288 samples for both channels (interleaved) = 5.46 seconds stereo buffer
 static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengthSeconds / 2;
@@ -82,7 +86,7 @@ constexpr float kLooperNoiseLevel = 0.3f;
 constexpr float kLooperInputGain = 1.f;
 constexpr float kLooperResampleGain = 1.f;
 constexpr float kLooperResampleLedAtt = 0.8f;
-constexpr float kLooperMakeupGain = 1.2f;
+constexpr float kLooperMakeupGain = 1.3f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 
 constexpr float kRecordOnsetLevel = 0.005f;
@@ -108,7 +112,7 @@ constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples
 
 constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
-constexpr float kOScSuperSawGain = 0.6f;
+constexpr float kOScSuperSawGain = 0.4f;
 constexpr float kOScWaveTablePreGain = 3.f;
 constexpr float kOScWaveTableGain = 0.2f;
 constexpr float kSourcesMakeupGain = 0.2f;
@@ -129,8 +133,8 @@ constexpr float kFilterBpGainMax = 1.6f;
 constexpr float kFilterCombGainMin = 0.1f;
 constexpr float kFilterCombGainMax = 0.2f;
 
-constexpr float kResoGainMin = 0.7f;
-constexpr float kResoGainMax = 0.9f;
+constexpr float kResoGainMin = 0.5f;
+constexpr float kResoGainMax = 1.2f;
 constexpr float kResoMakeupGain = 1.f;
 constexpr int32_t kResoBufferSize = 2400;
 constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
@@ -147,9 +151,9 @@ constexpr int kEchoExternalClockMultiplier = 32;
 constexpr int kEchoInternalClockMultiplier = 23; // ~192000 / 8192 (period of the buffer)
 constexpr float kEchoInfiniteFeedbackThreshold = 0.999f;
 constexpr float kEchoInfiniteFeedbackLevel = 1.001f;
-constexpr float kEchoCompThresMin = -16;
-constexpr float kEchoCompThresMax = -22;
-constexpr float kEchoMakeupGain = 1.f;
+constexpr int kEchoCompThresMin = -16;
+constexpr int kEchoCompThresMax = -22;
+constexpr float kEchoMakeupGain = 1.2f;
 
 constexpr int32_t kAmbienceLengthSeconds = 1.f;
 constexpr int kAmbienceNofDiffusers = 4;
@@ -157,10 +161,11 @@ constexpr float kAmbienceLowDampMin = -0.5f;
 constexpr float kAmbienceLowDampMax = -40.f;
 constexpr float kAmbienceHighDampMin = -0.5f;
 constexpr float kAmbienceHighDampMax = -40.f;
-constexpr float kAmbienceGainMid = 0.4f;
 constexpr float kAmbienceGainMin = 1.f;
-constexpr float kAmbienceGainMax = 0.5f;
-constexpr float kAmbienceMakeupGain = 1.4f;
+constexpr float kAmbienceGainMax = 1.2f;
+constexpr float kAmbienceRevGainMin = 1.4f;
+constexpr float kAmbienceRevGainMax = 1.2f;
+constexpr float kAmbienceMakeupGain = 1.2f;
 
 static const float kOutputFadeInc = 1.f / 16.f;
 constexpr float kOutputMakeupGain = 6.f;
@@ -314,6 +319,8 @@ struct PatchState
     bool modSpeedLockFlag;
     bool filterModeFlag;
     bool filterPositionFlag;
+
+    bool moving[23];
 
     float c5;
     float pitchZero;
@@ -517,6 +524,17 @@ inline float CenterMap(float value, float min = -1.f, float max = 1.f, float cen
     }
 
     return value;
+}
+
+/**
+ * @brief Returns -1 for negative numbers and +1 for positive numbers.
+ *
+ * @param val
+ * @return float
+ */
+inline float Sign(float val)
+{
+    return (0.f < val) - (val < 0.f);
 }
 
 /**

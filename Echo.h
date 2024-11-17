@@ -175,7 +175,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             comp_[i] = Compressor::create(patchState_->sampleRate);
-            comp_[i]->setThreshold(-20);
+            comp_[i]->setThreshold(-16);
             ef_[i] = EnvFollower::create();
         }
 
@@ -238,10 +238,6 @@ public:
                 outs_[TAP_RIGHT_B] = lines_[TAP_RIGHT_B]->read(tapsTimes_[TAP_RIGHT_B], newTapsTimes_[TAP_RIGHT_B], x); // B
 
                 x += xi_;
-                if (x >= size)
-                {
-                    x = 0;
-                }
             }
             else
             {
