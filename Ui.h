@@ -251,8 +251,7 @@ public:
             &octave_,
             &patchCtrls_->oscPitchModAmount,
             &patchCtrls_->oscPitchCvAmount,
-            0.01f,
-            0.1f
+            0.995f
         );
         knobs_[PARAM_KNOB_OSC_DETUNE] = KnobController::create(
             patchState_,
