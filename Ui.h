@@ -1311,6 +1311,8 @@ public:
             LoadModParams();
             LoadCvParams();
             startup_ = STARTUP_DONE;
+        case STARTUP_DONE:
+            return;
         }
     }
 
