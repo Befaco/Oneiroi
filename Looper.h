@@ -48,6 +48,7 @@ private:
 
     uint32_t bufferPhase_;
     uint32_t length_, start_, end_;
+    uint32_t newStart_;
 
     Schmitt trigger_;
 
@@ -56,8 +57,8 @@ private:
     Lut<uint32_t, 128> startLUT_;
     Lut<uint32_t, 128> lengthLUT_;
 
-    const uint32_t kLooperFadeSamples, kLooperTriggerFadeSamples;
-    const float kLooperFadeSamplesR, kLooperTriggerFadeSamplesR;
+    uint32_t kLooperFadeSamples, kLooperTriggerFadeSamples;
+    float kLooperFadeSamplesR, kLooperTriggerFadeSamplesR;
 
     void MapSpeed()
     {
@@ -147,7 +148,7 @@ private:
         {
             value = 1.f;
         }
-        start_ = startLUT_.Quantized(value);
+        newStart_ = startLUT_.Quantized(value);
         SetEnd();
     }
 
@@ -158,6 +159,10 @@ private:
             value = 1.f;
         }
         length_ = lengthLUT_.Quantized(value);
+
+        kLooperFadeSamples = std::min(0.05 * length_, 0.05 * patchState_->sampleRate);
+        kLooperFadeSamplesR = 1.f / kLooperFadeSamples;
+
         SetEnd();
     }
 
@@ -236,7 +241,8 @@ private:
                     int32_t start;
                     if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
                     {
-                        start = start_ - kLooperFadeSamples;
+                        // start fading in early so that at full volume by actual start (use new loop position also)
+                        start = newStart_ - kLooperFadeSamples;
                         if (start < 0)
                         {
                             start += kLooperChannelBufferLength;
@@ -255,8 +261,11 @@ private:
 
                     loopFadeVolume_ = loopCrossFadePhase_ * kLooperFadeSamplesR;
                     loopCrossFadePhase_ += fabs(speed_);
+
                     if (loopCrossFadePhase_ >= kLooperFadeSamples)
                     {
+                        phase_ = loopCrossFadePhase_ - kLooperFadeSamples;
+                        start_ = newStart_;
                         loopCrossFadePhase_ = 0;
                         loopFadeVolume_ = 1.f;
                         loopCrossFade_ = false;
