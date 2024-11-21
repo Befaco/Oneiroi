@@ -3,7 +3,6 @@
 #include "Commons.h"
 #include "Interpolator.h"
 #include "EnvFollower.h"
-#include "DcBlockingFilter.h"
 #include <algorithm>
 
 enum PlaybackDirection
@@ -16,42 +15,38 @@ enum PlaybackDirection
 class WriteHead
 {
 private:
-    enum FadeDirection
+    enum WriteStatus
     {
-        FADE_IN,
-        FADE_OUT,
-        FADE_NONE
+        WRITE_STATUS_INACTIVE,
+        WRITE_STATUS_FADE_IN,
+        WRITE_STATUS_FADE_OUT,
+        WRITE_STATUS_ACTIVE,
     };
 
     FloatArray* buffer_;
-    DcBlockingFilter* dc_;
 
-    FadeDirection fadeDirection_;
+    WriteStatus status_;
+
+    uint32_t index_;
+    uint32_t start_;
+    uint32_t end_;
 
     int fadeIndex_;
-    int lastSign_;
-    bool findZeroCrossing_;
+
     bool doFade_;
-    bool active_;
 
 public:
     WriteHead(FloatArray* buffer)
     {
         buffer_ = buffer;
 
-        dc_ = DcBlockingFilter::create();
+        status_ = WRITE_STATUS_INACTIVE;
 
-        fadeDirection_ = FADE_NONE;
         fadeIndex_ = 0;
-        lastSign_ = 0;
-        findZeroCrossing_ = false;
+
         doFade_ = false;
-        active_ = false;
     }
-    ~WriteHead()
-    {
-        DcBlockingFilter::destroy(dc_);
-    }
+    ~WriteHead() {}
 
     static WriteHead* create(FloatArray* buffer)
     {
@@ -63,26 +58,28 @@ public:
         delete obj;
     }
 
-    inline bool IsActive()
+    inline bool IsWriting()
     {
-        return active_;
+        return WRITE_STATUS_INACTIVE != status_;
     }
 
     inline void Start()
     {
-        if (!active_ && FADE_NONE == fadeDirection_)
+        if (WRITE_STATUS_INACTIVE == status_)
         {
-            fadeDirection_ = FADE_IN;
-            findZeroCrossing_ = true;
+            status_ = WRITE_STATUS_FADE_IN;
+            doFade_ = true;
+            fadeIndex_ = 0;
         }
     }
 
     inline void Stop()
     {
-        if (active_ && FADE_NONE == fadeDirection_)
+        if (WRITE_STATUS_ACTIVE == status_)
         {
-            fadeDirection_ = FADE_OUT;
-            findZeroCrossing_ = true;
+            status_ = WRITE_STATUS_FADE_OUT;
+            doFade_ = true;
+            fadeIndex_ = 0;
         }
     }
 
@@ -97,38 +94,27 @@ public:
             position += kLooperTotalBufferLength;
         }
 
-        if (findZeroCrossing_ )
-        {
-            float v = buffer_->getElement(position);
-            int s = Sign(v);
-            if (v == 0 || s != lastSign_)
-            {
-                findZeroCrossing_ = false;
-                doFade_ = true;
-            }
-            lastSign_ = s;
-        }
-
         if (doFade_)
         {
-            float level = fadeIndex_ * kLooperFadeSamplesR;
-            if (FADE_OUT == fadeDirection_)
+            float x = fadeIndex_ * kLooperFadeSamplesR;
+            if (WRITE_STATUS_FADE_IN == status_)
             {
-                level = 1.f - level;
+                x = 1.f - x;
             }
             fadeIndex_++;
             if (fadeIndex_ == kLooperFadeSamples)
             {
-                level = active_ = FADE_IN == fadeDirection_;
-                fadeDirection_ = FADE_NONE;
+                x = WRITE_STATUS_FADE_OUT == status_;
                 doFade_ = false;
-                lastSign_ = 0;
-                fadeIndex_ = 0;
+                status_ = (WRITE_STATUS_FADE_IN == status_ ? WRITE_STATUS_ACTIVE : WRITE_STATUS_INACTIVE);
             }
-            value = value * level + buffer_->getElement(position) * (1.f - level);
+            value = CheapEqualPowerCrossFade(value, buffer_->getElement(position), x);
         }
 
-        buffer_->setElement(position, dc_->process(value));
+        if (WRITE_STATUS_INACTIVE != status_)
+        {
+            buffer_->setElement(position, value);
+        }
     }
 };
 
@@ -203,7 +189,7 @@ public:
 
     inline bool IsRecording()
     {
-        return writeHeads_[LEFT_CHANNEL]->IsActive() || writeHeads_[RIGHT_CHANNEL]->IsActive();
+        return writeHeads_[LEFT_CHANNEL]->IsWriting() && writeHeads_[RIGHT_CHANNEL]->IsWriting();
     }
 
     inline void StartRecording()
