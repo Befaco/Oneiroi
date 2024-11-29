@@ -41,6 +41,7 @@ private:
     bool looping_;
     bool loopCrossFade_, triggerFadeOut_, triggerFadeIn_;
     bool recording_;
+    bool retriggerLoopOnClock_ = true;
 
     float loopCrossFadePhase_;
 
@@ -430,7 +431,9 @@ public:
 
         if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource && (trigger_.Process(patchState_->clockReset || patchState_->clockTick)))
         {
-            triggered_ = true;
+            if (retriggerLoopOnClock_) {
+                triggered_ = true;
+            }
         }
         else if (ClockSource::CLOCK_SOURCE_INTERNAL == patchState_->clockSource)
         {
@@ -484,5 +487,9 @@ public:
             output.multiply(patchCtrls_->looperVol * kLooperMakeupGain);
             limiter_->ProcessSoft(output, output);
         }
+    }
+
+    void SetRetriggerLoopOnClock(bool retriggerOnClock) {
+        retriggerLoopOnClock_ = retriggerOnClock;
     }
 };
