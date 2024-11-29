@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Commons.h"
-#include "Interpolator.h"
 #include "EnvFollower.h"
 #include <algorithm>
 
@@ -181,10 +180,8 @@ public:
 
     inline void Write(uint32_t i, float left, float right)
     {
-        i *= 2; // Interleaved
-
         writeHeads_[LEFT_CHANNEL]->Write(i, left);
-        writeHeads_[RIGHT_CHANNEL]->Write(i + 1, right);
+        writeHeads_[RIGHT_CHANNEL]->Write(i + kLooperChannelBufferLength, right);
     }
 
     inline bool IsRecording()
@@ -204,68 +201,51 @@ public:
         writeHeads_[RIGHT_CHANNEL]->Stop();
     }
 
-    inline float ReadAt(int position)
+    inline float ReadLeft(uint32_t position)
     {
-        while (position >= kLooperTotalBufferLength)
+        while (position >= kLooperChannelBufferLength)
         {
-            position -= kLooperTotalBufferLength;
+            position -= kLooperChannelBufferLength;
         }
         while (position < 0)
         {
-            position += kLooperTotalBufferLength;
+            position += kLooperChannelBufferLength;
         }
 
         return buffer_[position];
     }
 
-    // Interleaved reading.
+    inline float ReadRight(uint32_t position)
+    {
+        position += kLooperChannelBufferLength;
+
+        while (position >= kLooperTotalBufferLength)
+        {
+            position -= kLooperChannelBufferLength;
+        }
+        while (position < kLooperChannelBufferLength)
+        {
+            position += kLooperChannelBufferLength;
+        }
+
+        return buffer_[position];
+    }
+
     inline void Read(float p, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
     {
         float l0, l1;
         float r0, r1;
 
-        uint32_t i = uint32_t(p);
+        int32_t i = int32_t(p);
 
         float f = p - i;
 
-        i *= 2;
-
-        float d2 = 2 * direction;
-        float d3 = 3 * direction;
-
-        l0 = ReadAt(i);
-        l1 = ReadAt(i + d2);
+        l0 = ReadLeft(i);
+        l1 = ReadLeft(i + direction);
         left = l0 + direction * (l1 - l0) * f;
 
-        r0 = ReadAt(i + direction);
-        r1 = ReadAt(i + d3);
+        r0 = ReadRight(i);
+        r1 = ReadRight(i + direction);
         right = r0 + direction * (r1 - r0) * f;
-    }
-
-    // Interleaved reading.
-    inline void Read(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
-    {
-        float l0, l1;
-        float r0, r1;
-
-        uint32_t i1 = uint32_t(p1);
-        uint32_t i2 = uint32_t(p2);
-        float f1 = p1 - i1;
-        float f2 = p2 - i2;
-
-        i1 *= 2;
-        i2 *= 2;
-
-        float x0 = 1.f - x;
-        float d2 = 2 * direction;
-        float d3 = 3 * direction;
-
-        l0 = ReadAt(i1) * x0 + ReadAt(i2) * x;
-        l1 = ReadAt(i1 + d2) * x0 + ReadAt(i2 + d2) * x;
-        left = l0 + direction * (l1 - l0) * f1;
-
-        r0 = ReadAt(i1 + direction) * x0 + ReadAt(i2 + direction) * x;
-        r1 = ReadAt(i1 + d3) * x0 + ReadAt(i2 + d3) * x;
-        right = r0 + direction * (r1 - r0) * f2;
     }
 };

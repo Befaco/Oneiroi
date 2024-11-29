@@ -484,6 +484,11 @@ public:
         float t = Modulate(patchCtrls_->ambienceSpacetime, patchCtrls_->ambienceSpacetimeModAmount, patchState_->modValue, patchCtrls_->ambienceSpacetimeCvAmount, patchCvs_->ambienceSpacetime, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetSpacetime(t);
 
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
+        {
+            return;
+        }
+
         float r = 1.f - reverse_;
         float x = 0;
 

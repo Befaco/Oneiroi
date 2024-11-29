@@ -9,16 +9,6 @@
 #include "Schmitt.h"
 #include "MidiMessage.h"
 
-enum StartupPhase
-{
-    STARTUP_1,
-    STARTUP_2,
-    STARTUP_3,
-    STARTUP_4,
-    STARTUP_5,
-    STARTUP_DONE,
-};
-
 enum RandomMode
 {
     RANDOM_ALL,
@@ -92,8 +82,6 @@ private:
 
     HysteresisQuantizer octaveQuantizer_;
 
-    StartupPhase startup_;
-
     int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_, samplesSinceModCvPressed_, samplesSinceRecordInReceived_, samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
 
     bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, undoRedo_, doRandomSlew_;
@@ -136,8 +124,6 @@ public:
         undoRedo_ = false;
         doRandomSlew_ = false;
 
-        startup_ = STARTUP_1;
-
         lastOctave_ = 0;
         randomizeTask_ = 0;
 
@@ -162,6 +148,7 @@ public:
         patchState_->outLevel = 1.f;
         patchState_->randomSlew = kRandomSlewSamples;
         patchState_->randomHasSlew = false;
+        patchState_->startupPhase = StartupPhase::STARTUP_1;
 
         for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
         {
@@ -1237,9 +1224,9 @@ public:
 
     void Startup()
     {
-        switch (startup_)
+        switch (patchState_->startupPhase)
         {
-        case STARTUP_1:
+        case StartupPhase::STARTUP_1:
         {
             if (!leds_[LED_RECORD]->IsBlinking())
             {
@@ -1248,21 +1235,21 @@ public:
             leds_[LED_RECORD]->Read();
             if (!leds_[LED_RECORD]->IsBlinking())
             {
-                startup_ = STARTUP_2;
+                patchState_->startupPhase = StartupPhase::STARTUP_2;
             }
             return;
         }
-        case STARTUP_2:
+        case StartupPhase::STARTUP_2:
         {
             static int i = 0;
             if (i >= kStartupWaitSamples)
             {
-                startup_ = STARTUP_3;
+                patchState_->startupPhase = StartupPhase::STARTUP_3;
             }
             i++;
             return;
         }
-        case STARTUP_3:
+        case StartupPhase::STARTUP_3:
         {
             if (!leds_[LED_RANDOM]->IsBlinking())
             {
@@ -1271,33 +1258,33 @@ public:
             leds_[LED_RANDOM]->Read();
             if (!leds_[LED_RANDOM]->IsBlinking())
             {
-                startup_ = STARTUP_4;
+                patchState_->startupPhase = StartupPhase::STARTUP_4;
             }
             return;
         }
-        case STARTUP_4:
+        case StartupPhase::STARTUP_4:
         {
             static int i = 0;
             if (i >= kStartupWaitSamples)
             {
-                startup_ = STARTUP_5;
+                patchState_->startupPhase = StartupPhase::STARTUP_5;
             }
             i++;
             return;
         }
-        case STARTUP_5:
+        case StartupPhase::STARTUP_5:
             LoadMainParams();
             LoadAltParams();
             LoadModParams();
             LoadCvParams();
-            startup_ = STARTUP_DONE;
+            patchState_->startupPhase = StartupPhase::STARTUP_DONE;
         }
     }
 
     // Called at block rate
     void Poll()
     {
-        if (StartupPhase::STARTUP_DONE != startup_)
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
         {
             Startup();
 

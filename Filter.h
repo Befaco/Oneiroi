@@ -350,6 +350,11 @@ public:
         float c = Modulate(patchCtrls_->filterCutoff, patchCtrls_->filterCutoffModAmount, patchState_->modValue, patchCtrls_->filterCutoffCvAmount, patchCvs_->filterCutoff, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetFreq(c);
 
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
+        {
+            return;
+        }
+
         for (size_t i = 0; i < size; i++)
         {
             float n = noise_.Process() * noiseLevel_;

@@ -31,25 +31,22 @@ private:
     float phase_;
     float speed_;
     float speedValue_;
-    float inputGain_, feedback_, loopFadeVolume_, triggerFadeVolume_, speedVolume_;
     float filterValue_;
     float oldStartValue_, oldLengthValue_, oldSpeedValue_;
-    float looperFadeSamplesR_;
+    float inputGain_, feedback_, triggerFadeVolume_, speedVolume_;
+    float length_, start_;
+    float newLength_, newStart_;
+    float fadePhase_, fadeSamples_, fadeSamplesR_;
+    float fadeThreshold_;
 
     bool triggered_;
     bool boc_;
     bool cleared_;
-    bool looping_;
-    bool loopCrossFade_, triggerFadeOut_, triggerFadeIn_;
-
-    float loopCrossFadePhase_;
+    bool fade_, startFade_, triggerFadeOut_, triggerFadeIn_;
 
     int triggerFadeIndex_;
-    int looperFadeSamples_;
 
     uint32_t bufferPhase_;
-    uint32_t length_, start_, end_;
-    uint32_t newStart_, newEnd_;
 
     Schmitt trigger_;
 
@@ -128,38 +125,59 @@ private:
         speed_ = value;
     }
 
-    void SetEnd()
-    {
-        newEnd_ = newStart_ + length_;
-        if (newEnd_ >= kLooperChannelBufferLength)
-        {
-            newEnd_ -= kLooperChannelBufferLength;
-        }
-        looping_ = length_ < kLooperChannelBufferLength;
-    }
-
     void SetStart(float value)
     {
+        if (fade_)
+        {
+            return;
+        }
+
         if (value > 0.99f)
         {
             value = 1.f;
         }
-        newStart_ = startLUT_.Quantized(value);
-        SetEnd();
+
+        uint32_t v = startLUT_.Quantized(value);
+        if (v != start_)
+        {
+            newStart_ = v;
+
+            // Always fade, because the start point offsets the phase.
+            fade_ = true;
+            startFade_ = true;
+        }
     }
+
+    bool lengthFade_ = false;
 
     void SetLength(float value)
     {
+        if (fade_)
+        {
+            return;
+        }
+
         if (value > 0.99f)
         {
             value = 1.f;
         }
-        length_ = lengthLUT_.Quantized(value);
 
-        looperFadeSamples_ = Min(0.05f * length_, kLooperFadeSamples);
-        looperFadeSamplesR_ = 1.f / looperFadeSamples_;
+        uint32_t v = lengthLUT_.Quantized(value);
+        if (v != length_)
+        {
+            newLength_ = v;
 
-        SetEnd();
+            fadeThreshold_ = Min(newLength_ * 0.1f, kLooperFadeSamples);
+
+            // Fade is only necessary if phase goes outside of the loop.
+            if (phase_ > newLength_)
+            {
+                fadeSamples_ = Clamp(phase_ - newLength_, kLooperLoopLengthMin * 0.1f, kLooperFadeSamples);
+                fadeSamplesR_ = 1.f / fadeSamples_ * fabs(speed_);
+                fade_ = true;
+                lengthFade_ = true;
+            }
+        }
     }
 
     void SetFilter(float value)
@@ -183,7 +201,7 @@ private:
             else
             {
                 // Otherwise just reset the phase.
-                phase_ = 0.0f;
+                phase_ = 0.f;
             }
         }
 
@@ -191,11 +209,6 @@ private:
 
         for (size_t i = 0; i < size; i++)
         {
-            if (ClockSource::CLOCK_SOURCE_EXTERNAL == patchState_->clockSource)
-            {
-                looping_ = true;
-            }
-
             if (buffer_->IsRecording())
             {
                 float left, right;
@@ -221,45 +234,57 @@ private:
 
             buffer_->Read(start_ + phase_, left, right, direction_);
 
-            if (loopCrossFade_)
+            if (fade_)
             {
-                float leftTail;
-                float rightTail;
-
-                int32_t start;
-                if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
+                float start = newStart_;
+                if (!startFade_ && !lengthFade_)
                 {
-                    start = newStart_ - looperFadeSamples_;
-                    if (start < 0)
-                    {
-                        start += kLooperChannelBufferLength;
-                    }
-                    buffer_->Read(start + loopCrossFadePhase_, leftTail, rightTail, direction_);
+                    start -= newLength_ * direction_;
+                }
+                if (lengthFade_ && PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                {
+                    start += newLength_ - (length_ - phase_);
                 }
                 else
                 {
-                    start = newEnd_ + looperFadeSamples_;
-                    if (start >= kLooperChannelBufferLength)
-                    {
-                        start -= kLooperChannelBufferLength;
-                    }
-                    buffer_->Read(start - loopCrossFadePhase_, leftTail, rightTail, direction_);
+                    start += phase_;
                 }
 
-                loopFadeVolume_ = loopCrossFadePhase_ * looperFadeSamplesR_;
-                loopCrossFadePhase_ += fabs(speed_);
-                if (loopCrossFadePhase_ >= looperFadeSamples_)
+                float fadeLeft;
+                float fadeRight;
+                buffer_->Read(start, fadeLeft, fadeRight, direction_);
+
+                if (fadePhase_ < 1.f)
                 {
-                    phase_ = loopCrossFadePhase_ - looperFadeSamples_;
-                    start_ = newStart_;
-                    end_ = newEnd_;
-                    loopCrossFadePhase_ = 0;
-                    loopFadeVolume_ = 1.f;
-                    loopCrossFade_ = false;
+                    left = CheapEqualPowerCrossFade(left, fadeLeft, fadePhase_);
+                    right = CheapEqualPowerCrossFade(right, fadeRight, fadePhase_);
+                    fadePhase_ += fadeSamplesR_;
                 }
+                else
+                {
+                    if (!startFade_ && !lengthFade_)
+                    {
+                        phase_ = PlaybackDirection::PLAYBACK_FORWARD == direction_ ? Max(phase_ - newLength_, 0) : newLength_;
+                    }
+                    if (lengthFade_ && PlaybackDirection::PLAYBACK_BACKWARDS == direction_)
+                    {
+                        phase_ = newLength_ - (length_ - phase_);
+                    }
 
-                left = leftTail * loopFadeVolume_ + left * (1.f - loopFadeVolume_);
-                right = rightTail * loopFadeVolume_ + right * (1.f - loopFadeVolume_);
+                    fadePhase_ = 0;
+                    start_ = newStart_;
+                    length_ = newLength_;
+                    left = fadeLeft;
+                    right = fadeRight;
+                    fade_ = false;
+                    startFade_ = false;
+                    lengthFade_ = false;
+                }
+            }
+            else
+            {
+                start_ = newStart_;
+                length_ = newLength_;
             }
 
             if (triggerFadeOut_ || triggerFadeIn_)
@@ -276,7 +301,7 @@ private:
                     if (triggerFadeOut_)
                     {
                         // Reset phase when fade out is complete.
-                        phase_ = 0.0f;
+                        phase_ = 0.f;
                         triggerFadeVolume_ = 0.f;
                         triggerFadeOut_ = false;
                         triggerFadeIn_ = true;
@@ -291,29 +316,19 @@ private:
                 right *= triggerFadeVolume_;
             }
 
+            if (!fade_)
+            {
+                if ((PlaybackDirection::PLAYBACK_FORWARD == direction_ && phase_ >= length_ - fadeThreshold_) ||
+                    (PlaybackDirection::PLAYBACK_BACKWARDS == direction_ && phase_ <= fadeThreshold_))
+                {
+                    fadeSamples_ = PlaybackDirection::PLAYBACK_FORWARD == direction_ ? length_ - phase_ : phase_;
+                    fadeSamples_ = Clamp(fadeSamples_, kLooperLoopLengthMin * 0.1f, kLooperFadeSamples);
+                    fadeSamplesR_ = 1.f / fadeSamples_ * fabs(speed_);
+                    fade_ = true;
+                }
+            }
+
             phase_ += speed_;
-            if (PlaybackDirection::PLAYBACK_FORWARD == direction_)
-            {
-                if (phase_ >= length_)
-                {
-                    phase_ -= length_;
-                }
-                if (looping_ && !loopCrossFade_ && length_ > looperFadeSamples_ && phase_ >= length_ - looperFadeSamples_)
-                {
-                    loopCrossFade_ = true;
-                }
-            }
-            else
-            {
-                if (phase_ < 0)
-                {
-                    phase_ += length_;
-                }
-                if (looping_ && !loopCrossFade_ && length_ > looperFadeSamples_ && phase_ <= looperFadeSamples_)
-                {
-                    loopCrossFade_ = true;
-                }
-            }
 
             sosOut_->getSamples(LEFT_CHANNEL)[i] = left;
             sosOut_->getSamples(RIGHT_CHANNEL)[i] = right;
@@ -346,21 +361,22 @@ public:
 
         inputGain_ = 1.f;
         feedback_ = 0;
-        loopFadeVolume_ = 1.f;
         speedVolume_ = 1.f;
-        speedValue_ = 0;
+        oldSpeedValue_ = speedValue_ = 0.7f;
         speed_ = 1.f;
         phase_ = 0;
         wPhase_ = bufferPhase_ = 0;
-        length_ = kLooperChannelBufferLength;
+        length_ = newLength_ = kLooperChannelBufferLength;
         start_ = newStart_ = 0;
-        end_ = kLooperChannelBufferLength - 1;
         filterValue_ = 0;
-        loopCrossFadePhase_ = 0;
+        fadePhase_ = 0;
+        fadeThreshold_ = kLooperFadeSamples;
+        fadeSamples_ = kLooperFadeSamples;
+        fadeSamplesR_ = 1.f / fadeSamples_;
+        startFade_ = false;
         boc_ = true;
         cleared_ = false;
-        loopCrossFade_ = false;
-        looping_ = false;
+        fade_ = false;
         triggerFadeIndex_ = 0;
         triggerFadeVolume_ = 0;
         triggerFadeOut_ = false;
@@ -430,6 +446,11 @@ public:
         SetLength(l);
 
         SetFilter(patchCtrls_->looperFilter);
+
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
+        {
+            return;
+        }
 
         if (patchCtrls_->looperRecording && !buffer_->IsRecording())
         {

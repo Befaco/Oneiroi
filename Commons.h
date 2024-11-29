@@ -74,7 +74,7 @@ constexpr float kOscFreqMax = 8219.f; // C9
 
 constexpr size_t kLooperInterpolationBlocks = 4; // This number * block size = samples
 constexpr int kLooperLoopLengthMin = 367; // Almost C3 (48000 / 130.81f)
-constexpr int kLooperFadeSamples = 4800; // 100ms @ audio rate
+constexpr int kLooperFadeSamples = 2400; // 50ms @ audio rate
 static const float kLooperFadeSamplesR = 1.f / kLooperFadeSamples;
 constexpr int kLooperTriggerFadeSamples = 240; // 5ms @ audio rate
 static const float kLooperTriggerFadeSamplesR = 1.f / kLooperTriggerFadeSamples;
@@ -290,6 +290,16 @@ enum ClockSource
     CLOCK_SOURCE_EXTERNAL,
 };
 
+enum StartupPhase
+{
+    STARTUP_1,
+    STARTUP_2,
+    STARTUP_3,
+    STARTUP_4,
+    STARTUP_5,
+    STARTUP_DONE,
+};
+
 struct PatchState
 {
     float sampleRate;
@@ -335,6 +345,8 @@ struct PatchState
     bool cvAttenuverters;
 
     FuncMode funcMode;
+
+    StartupPhase startupPhase;
 };
 
 inline bool AreEquals(float val1, float val2, float d = kEps)
@@ -859,7 +871,7 @@ private:
 public:
     Lut(T min, T max, Type type = LUT_TYPE_LINEAR) : min_{min}, max_{max}, type_{type}
     {
-        quantizer_.Init(size, 0.25f, false);
+        quantizer_.Init(size, 0.15f, false);
 
         if (LUT_TYPE_EXPO == type)
         {
