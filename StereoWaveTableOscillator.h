@@ -3,7 +3,7 @@
 #include "Commons.h"
 #include "WaveTableBuffer.h"
 #include "BiquadFilter.h"
-#include "EnvelopeFollower.h"
+#include "EnvFollower.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <cmath>
@@ -17,7 +17,7 @@ private:
 
     WaveTableBuffer* wtBuffer_;
     BiquadFilter* filters_[2];
-    EnvelopeFollower* ef_[2];
+    EnvFollower* ef_[2];
 
     HysteresisQuantizer offsetQuantizer_;
 
@@ -48,7 +48,7 @@ public:
         {
             filters_[i] = BiquadFilter::create(patchState_->sampleRate);
             filters_[i]->setLowShelf(2000, 1);
-            ef_[i] = EnvelopeFollower::create(0.995f);
+            ef_[i] = EnvFollower::create();
         }
     }
     ~StereoWaveTableOscillator()
@@ -56,7 +56,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             BiquadFilter::destroy(filters_[i]);
-            EnvelopeFollower::destroy(ef_[i]);
+            EnvFollower::destroy(ef_[i]);
         }
     }
 
