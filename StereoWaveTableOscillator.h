@@ -2,8 +2,8 @@
 
 #include "Commons.h"
 #include "WaveTableBuffer.h"
-//#include "Compressor.h"
 #include "BiquadFilter.h"
+#include "EnvFollower.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <cmath>
@@ -16,8 +16,8 @@ private:
     PatchState* patchState_;
 
     WaveTableBuffer* wtBuffer_;
-    //Compressor* compressors_[2];
     BiquadFilter* filters_[2];
+    EnvFollower* ef_[2];
 
     HysteresisQuantizer offsetQuantizer_;
 
@@ -53,13 +53,8 @@ public:
         {
             filters_[i] = BiquadFilter::create(patchState_->sampleRate);
             filters_[i]->setLowShelf(2000, 1);
-        /*
-            compressors_[i] = Compressor::create(patchState_->sampleRate);
-            compressors_[i]->setRatio(10.f);
-            compressors_[i]->setAttack(1.f);
-            compressors_[i]->setRelease(100.f);
-            compressors_[i]->setThreshold(-20.f);
-        */
+            ef_[i] = EnvFollower::create();
+            ef_[i]->setLambda(0.995f);
         }
     }
     ~StereoWaveTableOscillator()
@@ -67,9 +62,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             BiquadFilter::destroy(filters_[i]);
-        /*
-            Compressor::destroy(compressors_[i]);
-        */
+            EnvFollower::destroy(ef_[i]);
         }
     }
 
@@ -122,19 +115,17 @@ public:
             float right;
             wtBuffer_->ReadLinear(p1, p2, x, left, right);
 
-            float l = patchCtrls_->osc2Vol * kOScWaveTablePreGain;
-            left = AudioClip(left, l);
-            right = AudioClip(right, l);
+            left *= Map(ef_[LEFT_CHANNEL]->process(left), 0.f, 0.3f, kOScWaveTablePreGain, 1.f);
+            right *= Map(ef_[RIGHT_CHANNEL]->process(right), 0.f, 0.3f, kOScWaveTablePreGain, 1.f);
+
+            left = SoftClip(left);
+            right = SoftClip(right);
 
             left = filters_[LEFT_CHANNEL]->process(left);
             right = filters_[RIGHT_CHANNEL]->process(right);
 
-            //left = compressors_[LEFT_CHANNEL]->process(left);
-            //right = compressors_[RIGHT_CHANNEL]->process(right);
-
-
-            output.getSamples(LEFT_CHANNEL)[i] = HardClip(left * l, kOScWaveTableGain);
-            output.getSamples(RIGHT_CHANNEL)[i] = HardClip(right * l, kOScWaveTableGain);
+            output.getSamples(LEFT_CHANNEL)[i] = left * patchCtrls_->osc2Vol * kOScWaveTableGain;
+            output.getSamples(RIGHT_CHANNEL)[i] = right * patchCtrls_->osc2Vol * kOScWaveTableGain;
         }
     }
 };

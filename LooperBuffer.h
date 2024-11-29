@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Commons.h"
-#include "Interpolator.h"
 #include "EnvFollower.h"
-#include "DcBlockingFilter.h"
 #include <algorithm>
 
 enum PlaybackDirection
@@ -16,30 +14,28 @@ enum PlaybackDirection
 class WriteHead
 {
 private:
-    enum FadeDirection
+    enum WriteStatus
     {
-        FADE_IN,
-        FADE_OUT,
-        FADE_NONE
+        WRITE_STATUS_INACTIVE,
+        WRITE_STATUS_FADE_IN,
+        WRITE_STATUS_FADE_OUT,
+        WRITE_STATUS_ACTIVE,
     };
 
     FloatArray* buffer_;
-    DcBlockingFilter* dc_;
 
-    FadeDirection fadeDirection_;
+    WriteStatus status_;
 
     int fadeIndex_;
-    int lastSign_;
-    bool findZeroCrossing_;
-    bool doFade_;
-    bool active_;
 
+    bool doFade_;
+
+public:
     // vcv specfic 
     const uint32_t kLooperTotalBufferLength;
     const uint32_t kLooperFadeSamples;
     const float kLooperFadeSamplesR;
 
-public:
     WriteHead(FloatArray* buffer, float sampleRate) :
         kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds), 
         kLooperFadeSamples(sampleRate * kLooperFadeSeconds),
@@ -47,19 +43,13 @@ public:
     {
         buffer_ = buffer;
 
-        dc_ = DcBlockingFilter::create();
+        status_ = WRITE_STATUS_INACTIVE;
 
-        fadeDirection_ = FADE_NONE;
         fadeIndex_ = 0;
-        lastSign_ = 0;
-        findZeroCrossing_ = false;
+
         doFade_ = false;
-        active_ = false;
     }
-    ~WriteHead()
-    {
-        DcBlockingFilter::destroy(dc_);
-    }
+    ~WriteHead() {}
 
     static WriteHead* create(FloatArray* buffer, float sampleRate)
     {
@@ -71,26 +61,28 @@ public:
         delete obj;
     }
 
-    inline bool IsActive()
+    inline bool IsWriting()
     {
-        return active_;
+        return WRITE_STATUS_INACTIVE != status_;
     }
 
     inline void Start()
     {
-        if (!active_ && FADE_NONE == fadeDirection_)
+        if (WRITE_STATUS_INACTIVE == status_)
         {
-            fadeDirection_ = FADE_IN;
-            findZeroCrossing_ = true;
+            status_ = WRITE_STATUS_FADE_IN;
+            doFade_ = true;
+            fadeIndex_ = 0;
         }
     }
 
     inline void Stop()
     {
-        if (active_ && FADE_NONE == fadeDirection_)
+        if (WRITE_STATUS_ACTIVE == status_)
         {
-            fadeDirection_ = FADE_OUT;
-            findZeroCrossing_ = true;
+            status_ = WRITE_STATUS_FADE_OUT;
+            doFade_ = true;
+            fadeIndex_ = 0;
         }
     }
 
@@ -105,38 +97,27 @@ public:
             position += kLooperTotalBufferLength;
         }
 
-        if (findZeroCrossing_ )
-        {
-            float v = buffer_->getElement(position);
-            int s = Sign(v);
-            if (v == 0 || s != lastSign_)
-            {
-                findZeroCrossing_ = false;
-                doFade_ = true;
-            }
-            lastSign_ = s;
-        }
-
         if (doFade_)
         {
-            float level = fadeIndex_ * kLooperFadeSamplesR;
-            if (FADE_OUT == fadeDirection_)
+            float x = fadeIndex_ * kLooperFadeSamplesR;
+            if (WRITE_STATUS_FADE_IN == status_)
             {
-                level = 1.f - level;
+                x = 1.f - x;
             }
             fadeIndex_++;
             if (fadeIndex_ == kLooperFadeSamples)
             {
-                level = active_ = FADE_IN == fadeDirection_;
-                fadeDirection_ = FADE_NONE;
+                x = WRITE_STATUS_FADE_OUT == status_;
                 doFade_ = false;
-                lastSign_ = 0;
-                fadeIndex_ = 0;
+                status_ = (WRITE_STATUS_FADE_IN == status_ ? WRITE_STATUS_ACTIVE : WRITE_STATUS_INACTIVE);
             }
-            value = value * level + buffer_->getElement(position) * (1.f - level);
+            value = CheapEqualPowerCrossFade(value, buffer_->getElement(position), x);
         }
 
-        buffer_->setElement(position, dc_->process(value));
+        if (WRITE_STATUS_INACTIVE != status_)
+        {
+            buffer_->setElement(position, value);
+        }
     }
 };
 
@@ -148,13 +129,14 @@ private:
     float* clearBlock_;
 
     // vcv specfic 
-    const uint32_t kLooperTotalBufferLength;
+    const uint32_t kLooperTotalBufferLength, kLooperChannelBufferLength;
     
     WriteHead* writeHeads_[2];
 
 public:
     LooperBuffer(float sampleRate) : 
-        kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds)
+        kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds),
+        kLooperChannelBufferLength(kLooperTotalBufferLength / 2)
     {
         buffer_ = FloatArray::create(kLooperTotalBufferLength);
         buffer_.noise();
@@ -213,15 +195,13 @@ public:
 
     inline void Write(uint32_t i, float left, float right)
     {
-        i *= 2; // Interleaved
-
         writeHeads_[LEFT_CHANNEL]->Write(i, left);
-        writeHeads_[RIGHT_CHANNEL]->Write(i + 1, right);
+        writeHeads_[RIGHT_CHANNEL]->Write(i + kLooperChannelBufferLength, right);
     }
 
     inline bool IsRecording()
     {
-        return writeHeads_[LEFT_CHANNEL]->IsActive() || writeHeads_[RIGHT_CHANNEL]->IsActive();
+        return writeHeads_[LEFT_CHANNEL]->IsWriting() && writeHeads_[RIGHT_CHANNEL]->IsWriting();
     }
 
     inline void StartRecording()
@@ -236,68 +216,51 @@ public:
         writeHeads_[RIGHT_CHANNEL]->Stop();
     }
 
-    inline float ReadAt(int position)
+    inline float ReadLeft(uint32_t position)
     {
-        while (position >= kLooperTotalBufferLength)
+        while (position >= kLooperChannelBufferLength)
         {
-            position -= kLooperTotalBufferLength;
+            position -= kLooperChannelBufferLength;
         }
         while (position < 0)
         {
-            position += kLooperTotalBufferLength;
+            position += kLooperChannelBufferLength;
         }
 
         return buffer_[position];
     }
 
-    // Interleaved reading.
+    inline float ReadRight(uint32_t position)
+    {
+        position += kLooperChannelBufferLength;
+
+        while (position >= kLooperTotalBufferLength)
+        {
+            position -= kLooperChannelBufferLength;
+        }
+        while (position < kLooperChannelBufferLength)
+        {
+            position += kLooperChannelBufferLength;
+        }
+
+        return buffer_[position];
+    }
+
     inline void Read(float p, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
     {
         float l0, l1;
         float r0, r1;
 
-        uint32_t i = uint32_t(p);
+        int32_t i = int32_t(p);
 
         float f = p - i;
 
-        i *= 2;
-
-        float d2 = 2 * direction;
-        float d3 = 3 * direction;
-
-        l0 = ReadAt(i);
-        l1 = ReadAt(i + d2);
+        l0 = ReadLeft(i);
+        l1 = ReadLeft(i + direction);
         left = l0 + direction * (l1 - l0) * f;
 
-        r0 = ReadAt(i + direction);
-        r1 = ReadAt(i + d3);
+        r0 = ReadRight(i);
+        r1 = ReadRight(i + direction);
         right = r0 + direction * (r1 - r0) * f;
-    }
-
-    // Interleaved reading.
-    inline void Read(float p1, float p2, float x, float &left, float &right, PlaybackDirection direction = PLAYBACK_FORWARD)
-    {
-        float l0, l1;
-        float r0, r1;
-
-        uint32_t i1 = uint32_t(p1);
-        uint32_t i2 = uint32_t(p2);
-        float f1 = p1 - i1;
-        float f2 = p2 - i2;
-
-        i1 *= 2;
-        i2 *= 2;
-
-        float x0 = 1.f - x;
-        float d2 = 2 * direction;
-        float d3 = 3 * direction;
-
-        l0 = ReadAt(i1) * x0 + ReadAt(i2) * x;
-        l1 = ReadAt(i1 + d2) * x0 + ReadAt(i2 + d2) * x;
-        left = l0 + direction * (l1 - l0) * f1;
-
-        r0 = ReadAt(i1 + direction) * x0 + ReadAt(i2 + direction) * x;
-        r1 = ReadAt(i1 + d3) * x0 + ReadAt(i2 + d3) * x;
-        right = r0 + direction * (r1 - r0) * f2;
     }
 };

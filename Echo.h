@@ -223,7 +223,12 @@ public:
 
         float r = Modulate(patchCtrls_->echoRepeats, patchCtrls_->echoRepeatsModAmount, patchState_->modValue, patchCtrls_->echoRepeatsCvAmount, patchCvs_->echoRepeats, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetRepeats(r);
-        
+
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
+        {
+            return;
+        }
+
         float x = 0;
         for (size_t i = 0; i < size; i++)
         {

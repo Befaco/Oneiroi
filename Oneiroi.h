@@ -227,7 +227,16 @@ public:
 
         buffer.multiply(kOutputMakeupGain);
         limiter_->ProcessSoft(buffer, buffer);
-        buffer.multiply(patchState_->outLevel);
+
+        if (StartupPhase::STARTUP_DONE == patchState_->startupPhase)
+        {
+            buffer.multiply(patchState_->outLevel);
+        }
+        else
+        {
+            // TODO: Fade in
+            buffer.clear();
+        }
 
         resample_->copyFrom(buffer);
     }

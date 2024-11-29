@@ -12,7 +12,7 @@
 - Improved wavetable sound by passing it through a fixed low shelf filter
 - Fixed sine waves unison (#12)
 - Fixed wavetable offset CV (#16)
-- Removed a bit of lag from V/OCT input
+- Removed a bit of lag from osc pitch control and V/OCT input
 - Tweaked the oscillators' levels (#17)
 - Swapped biquad filters for SVF in DjFilter to save some CPU, especially when
   looper is recording

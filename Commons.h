@@ -85,7 +85,7 @@ static const int32_t kLooperChannelBufferLengthSeconds = kLooperTotalBufferLengt
 constexpr float kLooperNoiseLevel = 0.3f;
 constexpr float kLooperInputGain = 1.f;
 constexpr float kLooperResampleGain = 1.f;
-constexpr float kLooperResampleLedAtt = 0.8f;
+constexpr float kLooperResampleLedAtt = 1.f;
 constexpr float kLooperMakeupGain = 1.3f;
 constexpr int kLooperClearBlocks = 128; // Number of blocks of the buffer to be cleared
 
@@ -113,8 +113,8 @@ constexpr float kClockTempoSamplesMin = 48; // Minimum number of tempo's samples
 constexpr float kOScSineGain = 0.3f;
 static const float kOscSineFadeInc = 1.f / 2400;
 constexpr float kOScSuperSawGain = 0.4f;
-constexpr float kOScWaveTablePreGain = 3.f;
-constexpr float kOScWaveTableGain = 0.2f;
+constexpr float kOScWaveTablePreGain = 6.f;
+constexpr float kOScWaveTableGain = 0.3f;
 constexpr float kSourcesMakeupGain = 0.2f;
 
 constexpr float kDjFilterMakeupGainMin = 1.f;
@@ -289,6 +289,16 @@ enum ClockSource
     CLOCK_SOURCE_EXTERNAL,
 };
 
+enum StartupPhase
+{
+    STARTUP_1,
+    STARTUP_2,
+    STARTUP_3,
+    STARTUP_4,
+    STARTUP_5,
+    STARTUP_DONE,
+};
+
 struct PatchState
 {
     float sampleRate;
@@ -335,6 +345,8 @@ struct PatchState
     bool cvAttenuverters;
 
     FuncMode funcMode;
+
+    StartupPhase startupPhase;
 };
 
 inline bool AreEquals(float val1, float val2, float d = kEps)
@@ -859,7 +871,7 @@ private:
 public:
     Lut(T min, T max, Type type = LUT_TYPE_LINEAR) : min_{min}, max_{max}, type_{type}
     {
-        quantizer_.Init(size, 0.25f, false);
+        quantizer_.Init(size, 0.15f, false);
 
         if (LUT_TYPE_EXPO == type)
         {
