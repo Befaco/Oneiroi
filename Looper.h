@@ -493,13 +493,15 @@ public:
                 cleared_ = false;
             }
         }
-        else if (PlaybackDirection::PLAYBACK_STALLED == direction_)
+
+        WriteRead(input, output);
+
+        if (PlaybackDirection::PLAYBACK_STALLED == direction_)
         {
             output.clear();
         }
         else
         {
-            WriteRead(input, output);
             output.multiply(patchCtrls_->looperVol * kLooperMakeupGain);
             limiter_->ProcessSoft(output, output);
         }

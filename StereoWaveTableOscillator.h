@@ -54,7 +54,6 @@ public:
             filters_[i] = BiquadFilter::create(patchState_->sampleRate);
             filters_[i]->setLowShelf(2000, 1);
             ef_[i] = EnvFollower::create();
-            ef_[i]->setLambda(0.995f);
         }
     }
     ~StereoWaveTableOscillator()
