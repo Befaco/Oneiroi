@@ -201,7 +201,7 @@ public:
         writeHeads_[RIGHT_CHANNEL]->Stop();
     }
 
-    inline float ReadLeft(uint32_t position)
+    inline float ReadLeft(int32_t position)
     {
         while (position >= kLooperChannelBufferLength)
         {
@@ -215,7 +215,7 @@ public:
         return buffer_[position];
     }
 
-    inline float ReadRight(uint32_t position)
+    inline float ReadRight(int32_t position)
     {
         position += kLooperChannelBufferLength;
 
