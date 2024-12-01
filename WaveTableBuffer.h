@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Commons.h"
+#include "Interpolator.h"
 
 class WaveTableBuffer
 {
@@ -26,21 +27,36 @@ public:
         delete obj;
     }
 
-    inline float ReadAt(int position)
+    inline float ReadLeft(uint32_t position)
     {
-        while (position >= kLooperTotalBufferLength)
+        while (position >= kLooperChannelBufferLength)
         {
-            position -= kLooperTotalBufferLength;
+            position -= kLooperChannelBufferLength;
         }
         while (position < 0)
         {
-            position += kLooperTotalBufferLength;
+            position += kLooperChannelBufferLength;
         }
 
         return buffer_->getElement(position);
     }
 
-    // Interleaved reading.
+    inline float ReadRight(uint32_t position)
+    {
+        position += kLooperChannelBufferLength;
+
+        while (position >= kLooperTotalBufferLength)
+        {
+            position -= kLooperChannelBufferLength;
+        }
+        while (position < kLooperChannelBufferLength)
+        {
+            position += kLooperChannelBufferLength;
+        }
+
+        return buffer_->getElement(position);
+    }
+
     inline void ReadLinear(float p1, float p2, float x, float &left, float &right)
     {
         float l0, l1;
@@ -51,17 +67,9 @@ public:
         float f1 = p1 - i1;
         float f2 = p2 - i2;
 
-        i1 *= 2;
-        i2 *= 2;
-
         float x0 = 1.f - x;
 
-        l0 = ReadAt(i1) * x0 + ReadAt(i2) * x;
-        l1 = ReadAt(i1 + 2) * x0 + ReadAt(i2 + 2) * x;
-        left = l0 + (l1 - l0) * f1;
-
-        r0 = ReadAt(i1 + 1) * x0 + ReadAt(i2 + 1) * x;
-        r1 = ReadAt(i1 + 3) * x0 + ReadAt(i2 + 3) * x;
-        right = r0 + (r1 - r0) * f2;
+        left = Interpolator::linear(ReadLeft(i1), ReadLeft(i1 + 1), f1) * x0 + Interpolator::linear(ReadLeft(i2), ReadLeft(i2 + 1), f2) * x;
+        right = Interpolator::linear(ReadRight(i1), ReadRight(i1 + 1), f1) * x0 + Interpolator::linear(ReadRight(i2), ReadRight(i2 + 1), f2) * x;
     }
 };
