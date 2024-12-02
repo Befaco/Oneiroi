@@ -32,8 +32,8 @@ private:
 
 public:
     // vcv specfic 
-    const uint32_t kLooperTotalBufferLength;
-    const uint32_t kLooperFadeSamples;
+    const int32_t kLooperTotalBufferLength;
+    const int32_t kLooperFadeSamples;
     const float kLooperFadeSamplesR;
 
     WriteHead(FloatArray* buffer, float sampleRate) :
@@ -129,7 +129,7 @@ private:
     float* clearBlock_;
 
     // vcv specfic 
-    const uint32_t kLooperTotalBufferLength, kLooperChannelBufferLength;
+    const int32_t kLooperTotalBufferLength, kLooperChannelBufferLength;
     
     WriteHead* writeHeads_[2];
 
@@ -218,7 +218,7 @@ public:
 
     inline float ReadLeft(int32_t position)
     {
-        while (position >= (int32_t) kLooperChannelBufferLength)
+        while (position >= kLooperChannelBufferLength)
         {
             position -= kLooperChannelBufferLength;
         }
@@ -234,11 +234,11 @@ public:
     {
         position += kLooperChannelBufferLength;
 
-        while (position >= (int32_t) kLooperTotalBufferLength)
+        while (position >= kLooperTotalBufferLength)
         {
             position -= kLooperChannelBufferLength;
         }
-        while (position < (int32_t) kLooperChannelBufferLength)
+        while (position < kLooperChannelBufferLength)
         {
             position += kLooperChannelBufferLength;
         }

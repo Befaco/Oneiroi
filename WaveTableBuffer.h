@@ -7,7 +7,7 @@ class WaveTableBuffer
 private:
     FloatArray* buffer_;
     int writeHead_;
-    const uint32_t kLooperTotalBufferLength;
+    const int32_t kLooperTotalBufferLength;
 public:
     WaveTableBuffer(FloatArray* buffer, float sampleRate) : kLooperTotalBufferLength(sampleRate * kLooperTotalBufferLengthSeconds)
 

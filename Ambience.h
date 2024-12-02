@@ -419,7 +419,8 @@ private:
     }
 
 public:
-    Ambience(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) : kAmbienceBufferSize(kAmbienceLengthSeconds * patchState->sampleRate)
+    Ambience(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) : 
+        kAmbienceBufferSize(kAmbienceLengthSeconds * patchState->sampleRate)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;

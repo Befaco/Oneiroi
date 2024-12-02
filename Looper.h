@@ -50,7 +50,7 @@ private:
 
     Schmitt trigger_;
 
-    const uint32_t kLooperChannelBufferLength;
+    const int32_t kLooperChannelBufferLength;
 
     Lut<uint32_t, 128> startLUT_;
     Lut<uint32_t, 128> lengthLUT_;
@@ -361,8 +361,8 @@ public:
         lengthLUT_(kLooperLoopLengthMinSeconds * patchState->sampleRate, kLooperChannelBufferLength, Lut<uint32_t, 128>::Type::LUT_TYPE_EXPO),
         kLooperFadeSamples(kLooperFadeSeconds * patchState->sampleRate),
         kLooperTriggerFadeSamples(kLooperTriggerFadeSeconds * patchState->sampleRate),
-        kLooperTriggerFadeSamplesR(1.f / kLooperTriggerFadeSamples),
-        kLooperLoopLengthMinSamples(kLooperLoopLengthMinSeconds * patchState->sampleRate)
+        kLooperLoopLengthMinSamples(kLooperLoopLengthMinSeconds * patchState->sampleRate),
+        kLooperTriggerFadeSamplesR(1.f / kLooperTriggerFadeSamples)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
