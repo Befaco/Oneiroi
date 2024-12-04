@@ -7,7 +7,7 @@
 class Schmitt
 {
 public:
-    Schmitt(bool gate = false, float thres = 0.3f) : g_{gate}, thres_{thres}
+    Schmitt(bool gate = false, float thres = 0.3f) : thres_{thres}, g_{gate}
     {
         f_ = false;
         t_ = false;

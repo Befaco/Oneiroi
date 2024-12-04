@@ -1369,6 +1369,11 @@ public:
                 vOctAmount = 0.f;
             }
         }
+
+        // VCV change
+        float noteCV = 12 * patchCvs_->oscPitch * vOctAmount;
+
+        /*
         float note = vOctOffset1_ + patchCvs_->oscPitch * vOctAmount * vOctScale1_;
         if (patchCvs_->oscPitch >= patchState_->c5)
         {
@@ -1380,6 +1385,7 @@ public:
             // Compensate for the two lowest semitones.
             note = 0;
         }
+        
         float interval = note - noteCv_;
         if (interval < -0.4f || interval > 0.4f)
         {
@@ -1389,11 +1395,12 @@ public:
         {
             noteCv_ += 0.1f * interval;
         }
+        */
         // tune_ is offset by half octave so that C is in the center.
-        note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
+        float note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
         note = 12 * note + 12 * patchCtrls_->oscOctave;
-        notePot_ += 0.1f * (note - notePot_);
-        patchCtrls_->oscPitch = M2F(notePot_ + noteCv_);
+        //notePot_ += 0.1f * (note - notePot_);
+        patchCtrls_->oscPitch = M2F(note + noteCV);
         if ((int)(12 * (tune_ - 0.5f) + 12 * patchCtrls_->oscOctave) % 12 == 0)
         {
             patchState_->oscPitchCenterFlag = true;
