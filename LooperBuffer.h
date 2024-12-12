@@ -86,7 +86,7 @@ public:
         }
     }
 
-    inline void Write(uint32_t position, float value)
+    inline void Write(int32_t position, float value)
     {
         while (position >= kLooperTotalBufferLength)
         {
@@ -193,7 +193,7 @@ public:
         */
     }
 
-    inline void Write(uint32_t i, float left, float right)
+    inline void Write(int32_t i, float left, float right)
     {
         writeHeads_[LEFT_CHANNEL]->Write(i, left);
         writeHeads_[RIGHT_CHANNEL]->Write(i + kLooperChannelBufferLength, right);

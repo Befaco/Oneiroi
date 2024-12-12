@@ -105,6 +105,10 @@ public:
 
         return out;
     }
+
+    void reset() {
+        line_.clear();
+    }
 };
 
 class CombFilter
@@ -173,6 +177,13 @@ public:
 
         return out_;
     }
+
+    void reset() {
+        for (size_t i = 0; i < 4; i++)
+        {
+            poles_[i]->reset();
+        }
+    }
 };
 
 class Filter
@@ -182,7 +193,7 @@ private:
     PatchCvs* patchCvs_;
     PatchState* patchState_;
     StateVariableFilter* filters_[2];
-    BiquadFilter* bpf_[2];
+    //BiquadFilter* bpf_[2];
     CombFilter* combs_[2];
     ChaosNoise noise_;
     FilterMode mode_, lastMode_;
@@ -197,6 +208,9 @@ private:
     // float dryWet_ = 0.f;
     float noiseLevel_ = 0.f;
     // float feedback_ = 0.f;
+
+    float cutoff = 0.f;
+    float lp_coeff = 0.2;
 
     void SetMode(float value)
     {
@@ -231,7 +245,9 @@ private:
     {
         filterGain_ = kFilterLpGainMin;
 
-        float cutoff = Clamp(MapLog(value, 0.f, 1.f, 10.f, 22000.f), 10.f, 22000.f);
+        const float cutoffRaw = Clamp(MapLog(value, 0.f, 1.f, 10.f, 22000.f), 10.f, 22000.f);
+        // VCV change: filter cutoff to avoid too abrupt a change, called once per block
+        ONE_POLE(cutoff, cutoffRaw, lp_coeff);
 
         switch (mode_)
         {
@@ -245,10 +261,12 @@ private:
                 break;
             }
         case FilterMode::BP:
-            bpf_[LEFT_CHANNEL]->setBandPass(cutoff, reso_);
-            bpf_[RIGHT_CHANNEL]->setBandPass(cutoff, reso_);
-            filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterBpGainMin, kFilterBpGainMax);
-            break;
+            {
+                filters_[LEFT_CHANNEL]->setBandPass(cutoff, reso_);
+                filters_[RIGHT_CHANNEL]->setBandPass(cutoff, reso_);
+                filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterBpGainMin, kFilterBpGainMax);
+                break;
+            }
         case FilterMode::HP:
             {
                 filters_[LEFT_CHANNEL]->setHighPass(cutoff, reso_);
@@ -274,7 +292,11 @@ private:
     void SetReso(float value)
     {
         resoValue_ = Clamp(value);
-        reso_ = VariableCrossFade(0.5f, 10.f, value, 0.9f);
+
+        const float reso_raw_ = VariableCrossFade(0.5f, 10.f, value, 0.9f);
+        // VCV change: filter resonance to avoid too abrupt a change, called once per block
+        ONE_POLE(reso_, reso_raw_, lp_coeff);
+
         drive_ = VariableCrossFade(0.f, 0.02f, value, 0.15f, 0.9f);
         noiseLevel_ = VariableCrossFade(0.f, 0.1f, value, 0.15f, 0.9f);
     }
@@ -292,7 +314,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             filters_[i] = StateVariableFilter::create(patchState_->sampleRate);
-            bpf_[i] = BiquadFilter::create(patchState_->sampleRate);
+            //bpf_[i] = BiquadFilter::create(patchState_->sampleRate);
             combs_[i] = CombFilter::create(patchState_->sampleRate);
             dc_[i] = DcBlockingFilter::create();
             ef_[i] = EnvFollower::create();
@@ -307,7 +329,7 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             StateVariableFilter::destroy(filters_[i]);
-            BiquadFilter::destroy(bpf_[i]);
+            //BiquadFilter::destroy(bpf_[i]);
             CombFilter::destroy(combs_[i]);
             DcBlockingFilter::destroy(dc_[i]);
             EnvFollower::destroy(ef_[i]);
@@ -345,10 +367,20 @@ public:
         }
 
         float r = Modulate(patchCtrls_->filterResonance, patchCtrls_->filterResonanceModAmount, patchState_->modValue, patchCtrls_->filterResonanceCvAmount, patchCvs_->filterResonance, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        SetReso(r);
 
         float c = Modulate(patchCtrls_->filterCutoff, patchCtrls_->filterCutoffModAmount, patchState_->modValue, patchCtrls_->filterCutoffCvAmount, patchCvs_->filterCutoff, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
-        SetFreq(c);
+        
+        // if filter mode changed, reset filters
+        if (patchState_->filterModeFlag) {
+            // bpf_[LEFT_CHANNEL]->reset();
+            // bpf_[RIGHT_CHANNEL]->reset();
+
+            filters_[LEFT_CHANNEL]->reset();
+            filters_[RIGHT_CHANNEL]->reset();
+
+            combs_[LEFT_CHANNEL]->reset();
+            combs_[RIGHT_CHANNEL]->reset();
+        }
 
         if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
         {
@@ -356,7 +388,11 @@ public:
         }
 
         for (size_t i = 0; i < size; i++)
-        {
+        {   
+            // called each sample to smooth out abrupt changes in frequency/resonance
+            SetReso(r);        
+            SetFreq(c);
+
             float n = noise_.Process() * noiseLevel_;
 
             float lIn = Clamp(leftIn[i], -3.f, 3.f);
@@ -376,13 +412,13 @@ public:
                 lo = dc_[LEFT_CHANNEL]->process(lo);
                 ro = dc_[RIGHT_CHANNEL]->process(ro);
             }
-            else if (FilterMode::BP == mode_)
-            {
-                lo = bpf_[LEFT_CHANNEL]->process(lf) * filterGain_;
-                ro = bpf_[RIGHT_CHANNEL]->process(rf) * filterGain_;
-                lo *= 1.f - ef_[LEFT_CHANNEL]->process(lo);
-                ro *= 1.f - ef_[RIGHT_CHANNEL]->process(ro);
-            }
+            //else if (FilterMode::BP == mode_)
+            //{
+            //    lo = bpf_[LEFT_CHANNEL]->process(lf) * filterGain_;
+            //    ro = bpf_[RIGHT_CHANNEL]->process(rf) * filterGain_;
+            //    lo *= 1.f - ef_[LEFT_CHANNEL]->process(lo);
+            //    ro *= 1.f - ef_[RIGHT_CHANNEL]->process(ro);
+            //}
             else
             {
                 lo = filters_[LEFT_CHANNEL]->process(lf) * filterGain_;

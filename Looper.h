@@ -46,7 +46,7 @@ private:
 
     int triggerFadeIndex_;
 
-    uint32_t bufferPhase_;
+    int32_t bufferPhase_;
 
     Schmitt trigger_;
 
@@ -56,7 +56,7 @@ private:
     Lut<uint32_t, 128> lengthLUT_;
 
     // VCV specific
-    uint32_t kLooperFadeSamples, kLooperTriggerFadeSamples, kLooperLoopLengthMinSamples;
+    int32_t kLooperFadeSamples, kLooperTriggerFadeSamples, kLooperLoopLengthMinSamples;
     float kLooperTriggerFadeSamplesR;
     bool retriggerLoopOnClock_ = true;
 

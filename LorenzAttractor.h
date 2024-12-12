@@ -29,7 +29,7 @@ public:
         zAtt_ = 0.0078125f;
         max_ = 0; min_ = 0;
 
-        setType(LorenzAttractor::Type::TYPE_TORUS);
+        setType(LorenzAttractor::Type::TYPE_DEFAULT);
         setFrequency(1.f);
     }
     ~LorenzAttractor() {}
@@ -166,5 +166,12 @@ public:
             xOut[i] = Map(x_, -20.f, 50.f, -xAtt_, xAtt_);
             yOut[i] = Map(y_, -20.f, 50.f, -yAtt_, yAtt_);
         }
+    }
+
+    void reset() override
+    {
+        x_ = y_ = z_ = 1.f;
+
+        OscillatorTemplate::reset();
     }
 };
