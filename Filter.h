@@ -2,7 +2,6 @@
 
 #include "Commons.h"
 #include "StateVariableFilter.h"
-#include "BiquadFilter.h"
 #include "ChaosNoise.h"
 #include "DcBlockingFilter.h"
 #include "EnvFollower.h"
@@ -182,7 +181,6 @@ private:
     PatchCvs* patchCvs_;
     PatchState* patchState_;
     StateVariableFilter* filters_[2];
-    BiquadFilter* bpf_[2];
     CombFilter* combs_[2];
     ChaosNoise noise_;
     FilterMode mode_, lastMode_;
@@ -245,9 +243,11 @@ private:
                 break;
             }
         case FilterMode::BP:
-            bpf_[LEFT_CHANNEL]->setBandPass(cutoff, reso_);
-            bpf_[RIGHT_CHANNEL]->setBandPass(cutoff, reso_);
-            filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterBpGainMin, kFilterBpGainMax);
+            {
+                filters_[LEFT_CHANNEL]->setBandPass(cutoff, reso_);
+                filters_[RIGHT_CHANNEL]->setBandPass(cutoff, reso_);
+                filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterBpGainMin, kFilterBpGainMax);
+            }
             break;
         case FilterMode::HP:
             {
@@ -292,7 +292,6 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             filters_[i] = StateVariableFilter::create(patchState_->sampleRate);
-            bpf_[i] = BiquadFilter::create(patchState_->sampleRate);
             combs_[i] = CombFilter::create(patchState_->sampleRate);
             dc_[i] = DcBlockingFilter::create();
             ef_[i] = EnvFollower::create();
@@ -307,7 +306,6 @@ public:
         for (size_t i = 0; i < 2; i++)
         {
             StateVariableFilter::destroy(filters_[i]);
-            BiquadFilter::destroy(bpf_[i]);
             CombFilter::destroy(combs_[i]);
             DcBlockingFilter::destroy(dc_[i]);
             EnvFollower::destroy(ef_[i]);
@@ -375,13 +373,6 @@ public:
                 ro = HardClip(combs_[RIGHT_CHANNEL]->Process(rf) * filterGain_);
                 lo = dc_[LEFT_CHANNEL]->process(lo);
                 ro = dc_[RIGHT_CHANNEL]->process(ro);
-            }
-            else if (FilterMode::BP == mode_)
-            {
-                lo = bpf_[LEFT_CHANNEL]->process(lf) * filterGain_;
-                ro = bpf_[RIGHT_CHANNEL]->process(rf) * filterGain_;
-                lo *= 1.f - ef_[LEFT_CHANNEL]->process(lo);
-                ro *= 1.f - ef_[RIGHT_CHANNEL]->process(ro);
             }
             else
             {
