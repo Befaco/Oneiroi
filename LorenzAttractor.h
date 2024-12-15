@@ -15,7 +15,7 @@ private:
     float sampleRate_;
     float x_, y_, z_, a_, b_, c_, t_, s_;
     float xAtt_, yAtt_, zAtt_, max_, min_;
-
+    const int oversampling = 4;
 public:
     static constexpr float begin_phase = 0;
     static constexpr float end_phase = 1;
@@ -29,10 +29,16 @@ public:
         zAtt_ = 0.0078125f;
         max_ = 0; min_ = 0;
 
-        setType(LorenzAttractor::Type::TYPE_DEFAULT);
+        setType(LorenzAttractor::Type::TYPE_TORUS);
         setFrequency(1.f);
     }
     ~LorenzAttractor() {}
+
+    void initialise()
+    {        
+        x_ = y_ = z_ = 1.f;
+        max_ = 0; min_ = 0;
+    }
 
     static LorenzAttractor* create(float sr)
     {
@@ -131,7 +137,7 @@ public:
     void setFrequency(float freq) override
     {
         freq *= 0.5f;
-        t_ = 1.f / (sampleRate_ / Clamp(freq, 0.001, 10.f));
+        t_ = (1.f / (sampleRate_ / Clamp(freq, 0.001, 10.f))) / oversampling;
     }
 
     void process()
@@ -147,7 +153,9 @@ public:
 
     float generate() override
     {
-        process();
+        for (int i = 0; i < oversampling; i++) {
+            process();
+        }
 
         max_ = Max(max_, x_);
         min_ = Min(min_, x_);
@@ -166,12 +174,5 @@ public:
             xOut[i] = Map(x_, -20.f, 50.f, -xAtt_, xAtt_);
             yOut[i] = Map(y_, -20.f, 50.f, -yAtt_, yAtt_);
         }
-    }
-
-    void reset() override
-    {
-        x_ = y_ = z_ = 1.f;
-
-        OscillatorTemplate::reset();
     }
 };

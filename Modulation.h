@@ -196,6 +196,13 @@ public:
 
         float l = MapExpo(patchCtrls_->modLevel);
         patchState_->modValueRaw = lfo_->generate();
+        if (std::isnan(patchState_->modValueRaw) || std::isinf(patchState_->modValueRaw))
+        {
+            // in very unlikely event that Lorenz attractor is stuck at infinity/nan, try to reset the state
+            static_cast<LorenzAttractor*>(lfo_->getOscillator(LORENZ))->initialise(); 
+            lfo_->reset();
+            patchState_->modValueRaw = lfo_->generate();
+        }
         patchState_->modValue = l > 0.02f ? patchState_->modValueRaw * l : 0;
     }
 };

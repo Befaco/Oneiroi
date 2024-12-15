@@ -128,8 +128,8 @@ constexpr float kFilterLpGainMin = 0.3f;
 constexpr float kFilterLpGainMax = 0.4f;
 constexpr float kFilterHpGainMin = 0.2f;
 constexpr float kFilterHpGainMax = 0.4f;
-constexpr float kFilterBpGainMin = 0.4f;
-constexpr float kFilterBpGainMax = 1.6f;
+constexpr float kFilterBpGainMin = 0.7f;
+constexpr float kFilterBpGainMax = 0.2f;
 constexpr float kFilterCombGainMin = 0.1f;
 constexpr float kFilterCombGainMax = 0.2f;
 
