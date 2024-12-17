@@ -364,7 +364,7 @@ inline bool AreEquals(float val1, float val2, float d = kEps)
 inline float Max(float a, float b)
 {
     float r;
-#ifdef __arm__
+#if 0
     asm("vmaxnm.f32 %[d], %[n], %[m]" : [d] "=t"(r) : [n] "t"(a), [m] "t"(b) :);
 #else
     r = (a > b) ? a : b;
@@ -382,7 +382,7 @@ inline float Max(float a, float b)
 inline float Min(float a, float b)
 {
     float r;
-#ifdef __arm__
+#if 0
     asm("vminnm.f32 %[d], %[n], %[m]" : [d] "=t"(r) : [n] "t"(a), [m] "t"(b) :);
 #else
     r = (a < b) ? a : b;
