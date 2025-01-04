@@ -155,6 +155,7 @@ public:
         patchState_->randomHasSlew = false;
         patchState_->clockSamples = 0;
         patchState_->startupPhase = StartupPhase::STARTUP_DONE;     // VCV doesn't need startup
+        patchState_->clearLooperFlag = false;
 
         for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
         {

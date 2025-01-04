@@ -10,7 +10,7 @@ class Compressor
 {
 private:
     float sampleRate_;
-    float threshold_;
+    float threshold_ = 0.f;
     float ratio_, expo_;
     float attack_;
     float release_;
