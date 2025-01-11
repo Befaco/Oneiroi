@@ -488,7 +488,7 @@ public:
 
     void LoadAltParams()
     {
-        Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".alt");
+        Resource* resource = nullptr; //Resource::load(PATCH_SETTINGS_NAME ".alt");
         if (resource != NULL)
         {
             int16_t* cfg = (int16_t*)resource->getData();
@@ -531,7 +531,7 @@ public:
 
     void LoadCvParams()
     {
-        Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".cv");
+        Resource* resource = nullptr; //Resource::load(PATCH_SETTINGS_NAME ".cv");
         if (resource)
         {
             int16_t* cfg = (int16_t*)resource->getData();
@@ -554,7 +554,7 @@ public:
 
     void LoadMainParams()
     {
-        Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".prm");
+        Resource* resource = nullptr; //Resource::load(PATCH_SETTINGS_NAME ".prm");
         if (resource)
         {
             int16_t* cfg = (int16_t*)resource->getData();
