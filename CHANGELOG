@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 (2025-03-25)
+
+- fixed 0v-1v V/Oct CV range (<https://github.com/Befaco/Oneiroi/issues/37>)
+
 ## 1.1.1 (2024-12-14)
 
 - Changed BP filter from biguad to SVF to prevent potential instabilities (from

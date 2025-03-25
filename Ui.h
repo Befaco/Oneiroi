@@ -37,13 +37,13 @@ enum FuncState
 struct Configuration
 {
   uint32_t voct1_scale; // For C0-C4 range
-  uint32_t voct1_offset;
+  int32_t voct1_offset;
   uint32_t voct2_scale; // For C5-C9 range
-  uint32_t voct2_offset;
+  int32_t voct2_offset;
   bool soft_takeover;
   bool mod_attenuverters;
   bool cv_attenuverters;
-  uint16_t c5;
+  uint16_t c4;
   uint16_t pitch_zero;
   uint16_t speed_zero;
   uint16_t params_min[40];
@@ -457,7 +457,7 @@ public:
             vOctOffset2_ = (float)configuration->voct2_offset / UINT16_MAX;
 
             PatchParameterId voctParam = paramCvMap[PARAM_CV_OSC_PITCH];
-            patchState_->c5 = (float)configuration->c5 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
+            patchState_->c4 = (float)configuration->c4 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
             PatchParameterId pitchParam = paramKnobMap[PARAM_KNOB_OSC_PITCH];
             patchState_->pitchZero = (float)configuration->pitch_zero / (configuration->params_max[pitchParam] - configuration->params_min[pitchParam]);
             PatchParameterId speedParam = paramKnobMap[PARAM_KNOB_LOOPER_SPEED];
@@ -1349,15 +1349,9 @@ public:
             }
         }
         float note = vOctOffset1_ + patchCvs_->oscPitch * vOctAmount * vOctScale1_;
-        if (patchCvs_->oscPitch >= patchState_->c5)
+        if (patchCvs_->oscPitch > patchState_->c4)
         {
             note = vOctOffset2_ + patchCvs_->oscPitch * vOctAmount * vOctScale2_;
-        }
-
-        if (note > 0 && note < 3.f)
-        {
-            // Compensate for the two lowest semitones.
-            note = 0;
         }
         float interval = note - noteCv_;
         if (interval < -0.4f || interval > 0.4f)
@@ -1368,12 +1362,12 @@ public:
         {
             noteCv_ += 0.1f * interval;
         }
-        // tune_ is offset by half octave so that C is in the center.
-        note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
+        float tune = CenterMap(tune_, -0.5f, 0.5f, patchState_->pitchZero);
+        note = Modulate(tune, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
         note = 12 * note + 12 * patchCtrls_->oscOctave;
         notePot_ += 0.1f * (note - notePot_);
         patchCtrls_->oscPitch = M2F(notePot_ + noteCv_);
-        if ((int)(12 * (tune_ - 0.5f) + 12 * patchCtrls_->oscOctave) % 12 == 0)
+        if (tune >= -0.01f && tune <= 0.01f)
         {
             patchState_->oscPitchCenterFlag = true;
         }
