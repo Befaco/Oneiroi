@@ -9,16 +9,9 @@
 #include "Schmitt.h"
 #include "MidiMessage.h"
 
-enum RandomMode
-{
-    RANDOM_ALL,
-    RANDOM_OSC,
-    RANDOM_LOOPER,
-    RANDOM_EFFECTS
-};
+enum RandomMode { RANDOM_ALL, RANDOM_OSC, RANDOM_LOOPER, RANDOM_EFFECTS };
 
-enum RecordingState
-{
+enum RecordingState {
     RECORDING_STATE_IDLE,
     RECORDING_STATE_START,
     RECORDING_STATE_WAITING_ONSET,
@@ -26,34 +19,36 @@ enum RecordingState
     RECORDING_STATE_STOP,
 };
 
-enum FuncState
-{
+enum FuncState {
     FUNC_STATE_IDLE,
     FUNC_STATE_PRESSED,
     FUNC_STATE_HELD,
     FUNC_STATE_RELEASED,
 };
 
-struct Configuration
-{
-  uint32_t voct1_scale; // For C0-C4 range
-  int32_t voct1_offset;
-  uint32_t voct2_scale; // For C5-C9 range
-  int32_t voct2_offset;
-  bool soft_takeover;
-  bool mod_attenuverters;
-  bool cv_attenuverters;
-  uint16_t c4;
-  uint16_t pitch_zero;
-  uint16_t speed_zero;
-  uint16_t params_min[40];
-  uint16_t params_max[40];
+struct Configuration {
+    uint32_t voct1_scale; // For C2-C5 range
+    int32_t voct1_offset;
+    uint32_t voct2_scale; // For C5-C9 range
+    int32_t voct2_offset;
+    bool soft_takeover;
+    bool mod_attenuverters;
+    bool cv_attenuverters;
+    uint16_t c5;
+    uint16_t pitch_zero;
+    uint16_t speed_zero;
+    uint16_t params_min[40];
+    uint16_t params_max[40];
+    // Revision 2:
+    uint32_t voct0_scale; // For C0-C2 range
+    int32_t voct0_offset;
+    uint16_t c2;
+    int revision;
 };
 
 extern PatchProcessor* getInitialisingPatchProcessor();
 
-class Ui
-{
+class Ui {
 private:
     PatchCtrls* patchCtrls_;
     PatchCvs* patchCvs_;
@@ -76,28 +71,36 @@ private:
     RandomMode randomMode_;
     RandomAmount randomAmount_;
 
-    Schmitt clearLooperTrigger_, looperSpeedLockTrigger_, oscPitchCenterTrigger_, oscOctaveTrigger_, oscUnisonCenterTrigger_;
-    Schmitt undoRedoRandomTrigger_, recordAndRandomTrigger_, modTypeLockTrigger_, modSpeedLockTrigger_, saveTrigger_;
+    Schmitt clearLooperTrigger_, looperSpeedLockTrigger_,
+        oscPitchCenterTrigger_, oscOctaveTrigger_, oscUnisonCenterTrigger_;
+    Schmitt undoRedoRandomTrigger_, recordAndRandomTrigger_,
+        modTypeLockTrigger_, modSpeedLockTrigger_, saveTrigger_;
     Schmitt filterModeTrigger_, filterPositionTrigger_;
 
     HysteresisQuantizer octaveQuantizer_;
 
-    int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_, samplesSinceModCvPressed_, samplesSinceRecordInReceived_, samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
+    int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_,
+        samplesSinceModCvPressed_, samplesSinceRecordInReceived_,
+        samplesSinceRecordingStarted_, samplesSinceRandomPressed_,
+        hwRevision_;
 
-    bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_, fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_, undoRedo_, doRandomSlew_;
+    bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_,
+        fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
+        undoRedo_, doRandomSlew_;
 
     int lastOctave_, randomizeTask_;
 
-    float octave_, tune_, vOctScale1_, vOctOffset1_, vOctScale2_, vOctOffset2_, unison_, looperVol_, osc1Vol_, osc2Vol_, inputVol_, noteCv_, notePot_, randomize_, randomSlewInc_;
+    float octave_, tune_, vOctScale0_, vOctOffset0_, vOctScale1_, vOctOffset1_,
+        vOctScale2_, vOctOffset2_, unison_, looperVol_, osc1Vol_, osc2Vol_,
+        inputVol_, noteCv_, notePot_, randomize_, randomSlewInc_;
 
 public:
-    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
-    {
+    Ui(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
         patchState_ = patchState;
 
-        octaveQuantizer_.Init(8, 0.25f, false);
+        octaveQuantizer_.Init(8, 0.125f, false);
 
         movingParam_ = NULL;
 
@@ -129,6 +132,8 @@ public:
 
         octave_ = 0;
         tune_ = 0;
+        vOctScale0_ = 0;
+        vOctOffset0_ = 0;
         vOctScale1_ = 0;
         vOctOffset1_ = 0;
         vOctScale2_ = 0;
@@ -142,6 +147,8 @@ public:
         notePot_ = 0;
         randomSlewInc_ = 0;
 
+        hwRevision_ = 0;
+
         patchState_->funcMode = FuncMode::FUNC_MODE_NONE;
         patchState_->inputLevel = FloatArray::create(patchState_->blockSize);
         patchState_->efModLevel = FloatArray::create(patchState_->blockSize);
@@ -149,17 +156,21 @@ public:
         patchState_->randomSlew = kRandomSlewSamples;
         patchState_->randomHasSlew = false;
         patchState_->startupPhase = StartupPhase::STARTUP_1;
+        patchState_->softTakeover = false;
+        patchState_->modAttenuverters = false;
+        patchState_->cvAttenuverters = false;
 
-        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
             patchState_->moving[i] = false;
         }
 
         // Alt params
         patchCtrls_->looperSos = 0.f;
         patchCtrls_->looperFilter = 0.55f; // Center is not 0.5
-        patchCtrls_->looperResampling = getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
-        patchCtrls_->oscUseWavetable = getInitialisingPatchProcessor()->patch->isButtonPressed(SSWT_SWITCH);
+        patchCtrls_->looperResampling =
+            getInitialisingPatchProcessor()->patch->isButtonPressed(PREPOST_SWITCH);
+        patchCtrls_->oscUseWavetable =
+            getInitialisingPatchProcessor()->patch->isButtonPressed(SSWT_SWITCH);
         lastOctave_ = 3;
         octave_ = 1.f / 8.f * lastOctave_;
         unison_ = 0.55f; // Center is not 0.5
@@ -199,139 +210,110 @@ public:
         LoadConfig();
 
         faders_[PARAM_FADER_IN_VOL] = FaderController::create(patchState_, &inputVol_);
-        faders_[PARAM_FADER_LOOPER_VOL] = FaderController::create(patchState_, &looperVol_);
-        faders_[PARAM_FADER_OSC1_VOL] = FaderController::create(patchState_, &osc1Vol_);
-        faders_[PARAM_FADER_OSC2_VOL] = FaderController::create(patchState_, &osc2Vol_);
-        faders_[PARAM_FADER_FILTER_VOL] = FaderController::create(patchState_, &patchCtrls_->filterVol);
-        faders_[PARAM_FADER_RESONATOR_VOL] = FaderController::create(patchState_, &patchCtrls_->resonatorVol);
-        faders_[PARAM_FADER_ECHO_VOL] = FaderController::create(patchState_, &patchCtrls_->echoVol);
-        faders_[PARAM_FADER_AMBIENCE_VOL] = FaderController::create(patchState_, &patchCtrls_->ambienceVol);
+        faders_[PARAM_FADER_LOOPER_VOL] =
+            FaderController::create(patchState_, &looperVol_);
+        faders_[PARAM_FADER_OSC1_VOL] =
+            FaderController::create(patchState_, &osc1Vol_);
+        faders_[PARAM_FADER_OSC2_VOL] =
+            FaderController::create(patchState_, &osc2Vol_);
+        faders_[PARAM_FADER_FILTER_VOL] =
+            FaderController::create(patchState_, &patchCtrls_->filterVol);
+        faders_[PARAM_FADER_RESONATOR_VOL] =
+            FaderController::create(patchState_, &patchCtrls_->resonatorVol);
+        faders_[PARAM_FADER_ECHO_VOL] =
+            FaderController::create(patchState_, &patchCtrls_->echoVol);
+        faders_[PARAM_FADER_AMBIENCE_VOL] =
+            FaderController::create(patchState_, &patchCtrls_->ambienceVol);
 
-        knobs_[PARAM_KNOB_LOOPER_SPEED] = KnobController::create(
-            patchState_,
-            &patchCtrls_->looperSpeed,
-            NULL,
-            &patchCtrls_->looperSpeedModAmount,
-            &patchCtrls_->looperSpeedCvAmount,
-            0.005f
-        );
-        knobs_[PARAM_KNOB_LOOPER_START] = KnobController::create(
-            patchState_,
-            &patchCtrls_->looperStart,
-            &patchCtrls_->looperSos,
-            &patchCtrls_->looperStartModAmount,
-            &patchCtrls_->looperStartCvAmount,
-            0.005f
-        );
-        knobs_[PARAM_KNOB_LOOPER_LENGTH] = KnobController::create(
-            patchState_,
-            &patchCtrls_->looperLength,
-            &patchCtrls_->looperFilter,
-            &patchCtrls_->looperLengthModAmount,
-            &patchCtrls_->looperLengthCvAmount,
-            0.005f
-        );
+        knobs_[PARAM_KNOB_LOOPER_SPEED] = KnobController::create(patchState_,
+            &patchCtrls_->looperSpeed, NULL, &patchCtrls_->looperSpeedModAmount,
+            &patchCtrls_->looperSpeedCvAmount, 0.005f);
+        knobs_[PARAM_KNOB_LOOPER_START] =
+            KnobController::create(patchState_, &patchCtrls_->looperStart,
+                &patchCtrls_->looperSos, &patchCtrls_->looperStartModAmount,
+                &patchCtrls_->looperStartCvAmount, 0.005f);
+        knobs_[PARAM_KNOB_LOOPER_LENGTH] =
+            KnobController::create(patchState_, &patchCtrls_->looperLength,
+                &patchCtrls_->looperFilter, &patchCtrls_->looperLengthModAmount,
+                &patchCtrls_->looperLengthCvAmount, 0.005f);
 
-        knobs_[PARAM_KNOB_OSC_PITCH] = KnobController::create(
-            patchState_,
-            &tune_,
-            &octave_,
-            &patchCtrls_->oscPitchModAmount,
-            &patchCtrls_->oscPitchCvAmount,
-            0.995f
-        );
-        knobs_[PARAM_KNOB_OSC_DETUNE] = KnobController::create(
-            patchState_,
-            &patchCtrls_->oscDetune,
-            &unison_,
-            &patchCtrls_->oscDetuneModAmount,
-            &patchCtrls_->oscDetuneCvAmount,
-            0.1f
-        );
+        knobs_[PARAM_KNOB_OSC_PITCH] = KnobController::create(patchState_,
+            &tune_, &octave_, &patchCtrls_->oscPitchModAmount,
+            &patchCtrls_->oscPitchCvAmount, 0.995f);
+        knobs_[PARAM_KNOB_OSC_DETUNE] = KnobController::create(patchState_,
+            &patchCtrls_->oscDetune, &unison_, &patchCtrls_->oscDetuneModAmount,
+            &patchCtrls_->oscDetuneCvAmount, 0.1f);
 
-        knobs_[PARAM_KNOB_FILTER_CUTOFF] = KnobController::create(
-            patchState_,
-            &patchCtrls_->filterCutoff,
-            &patchCtrls_->filterMode,
-            &patchCtrls_->filterCutoffModAmount,
-            &patchCtrls_->filterCutoffCvAmount
-        );
-        knobs_[PARAM_KNOB_FILTER_RESONANCE] = KnobController::create(
-            patchState_,
-            &patchCtrls_->filterResonance,
-            &patchCtrls_->filterPosition,
+        knobs_[PARAM_KNOB_FILTER_CUTOFF] = KnobController::create(patchState_,
+            &patchCtrls_->filterCutoff, &patchCtrls_->filterMode,
+            &patchCtrls_->filterCutoffModAmount, &patchCtrls_->filterCutoffCvAmount);
+        knobs_[PARAM_KNOB_FILTER_RESONANCE] = KnobController::create(patchState_,
+            &patchCtrls_->filterResonance, &patchCtrls_->filterPosition,
             &patchCtrls_->filterResonanceModAmount,
-            &patchCtrls_->filterResonanceCvAmount
-        );
+            &patchCtrls_->filterResonanceCvAmount);
 
-        knobs_[PARAM_KNOB_RESONATOR_TUNE] = KnobController::create(
-            patchState_,
-            &patchCtrls_->resonatorTune,
-            &patchCtrls_->resonatorDissonance,
+        knobs_[PARAM_KNOB_RESONATOR_TUNE] = KnobController::create(patchState_,
+            &patchCtrls_->resonatorTune, &patchCtrls_->resonatorDissonance,
             &patchCtrls_->resonatorTuneModAmount,
-            &patchCtrls_->resonatorTuneCvAmount,
-            0.005f
-        );
-        knobs_[PARAM_KNOB_RESONATOR_FEEDBACK] = KnobController::create(
-            patchState_,
-            &patchCtrls_->resonatorFeedback,
-            NULL,
-            &patchCtrls_->resonatorFeedbackModAmount,
-            &patchCtrls_->resonatorFeedbackCvAmount
-        );
+            &patchCtrls_->resonatorTuneCvAmount, 0.005f);
+        knobs_[PARAM_KNOB_RESONATOR_FEEDBACK] =
+            KnobController::create(patchState_, &patchCtrls_->resonatorFeedback,
+                NULL, &patchCtrls_->resonatorFeedbackModAmount,
+                &patchCtrls_->resonatorFeedbackCvAmount);
 
-        knobs_[PARAM_KNOB_ECHO_DENSITY] = KnobController::create(
-            patchState_,
-            &patchCtrls_->echoDensity,
-            &patchCtrls_->echoFilter,
-            &patchCtrls_->echoDensityModAmount,
-            &patchCtrls_->echoDensityCvAmount,
-            0.005f
-        );
-        knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(
-            patchState_,
-            &patchCtrls_->echoRepeats,
-            NULL,
-            &patchCtrls_->echoRepeatsModAmount,
-            &patchCtrls_->echoRepeatsCvAmount
-        );
+        knobs_[PARAM_KNOB_ECHO_DENSITY] =
+            KnobController::create(patchState_, &patchCtrls_->echoDensity,
+                &patchCtrls_->echoFilter, &patchCtrls_->echoDensityModAmount,
+                &patchCtrls_->echoDensityCvAmount, 0.005f);
+        knobs_[PARAM_KNOB_ECHO_REPEATS] = KnobController::create(patchState_,
+            &patchCtrls_->echoRepeats, NULL, &patchCtrls_->echoRepeatsModAmount,
+            &patchCtrls_->echoRepeatsCvAmount);
 
-        knobs_[PARAM_KNOB_AMBIENCE_SPACETIME] = KnobController::create(
-            patchState_,
-            &patchCtrls_->ambienceSpacetime,
-            &patchCtrls_->ambienceAutoPan,
+        knobs_[PARAM_KNOB_AMBIENCE_SPACETIME] = KnobController::create(patchState_,
+            &patchCtrls_->ambienceSpacetime, &patchCtrls_->ambienceAutoPan,
             &patchCtrls_->ambienceSpacetimeModAmount,
-            &patchCtrls_->ambienceSpacetimeCvAmount,
-            0.005f
-        );
-        knobs_[PARAM_KNOB_AMBIENCE_DECAY] = KnobController::create(
-            patchState_,
-            &patchCtrls_->ambienceDecay,
-            NULL,
-            &patchCtrls_->ambienceDecayModAmount,
-            &patchCtrls_->ambienceDecayCvAmount
-        );
+            &patchCtrls_->ambienceSpacetimeCvAmount, 0.005f);
+        knobs_[PARAM_KNOB_AMBIENCE_DECAY] = KnobController::create(patchState_,
+            &patchCtrls_->ambienceDecay, NULL, &patchCtrls_->ambienceDecayModAmount,
+            &patchCtrls_->ambienceDecayCvAmount);
 
-        knobs_[PARAM_KNOB_MOD_LEVEL] = KnobController::create(patchState_, &patchCtrls_->modLevel);
-        knobs_[PARAM_KNOB_MOD_SPEED] = KnobController::create(patchState_, &patchCtrls_->modSpeed, &patchCtrls_->modType);
+        knobs_[PARAM_KNOB_MOD_LEVEL] =
+            KnobController::create(patchState_, &patchCtrls_->modLevel);
+        knobs_[PARAM_KNOB_MOD_SPEED] = KnobController::create(
+            patchState_, &patchCtrls_->modSpeed, &patchCtrls_->modType);
 
-        switches_[PARAM_SWITCH_OSC_USE_SSWT] = SwitchController::create(&patchCtrls_->oscUseWavetable);
-        switches_[PARAM_SWITCH_RANDOM_AMOUNT] = SwitchController::create(&patchCtrls_->randomAmount);
-        switches_[PARAM_SWITCH_RANDOM_MODE] = SwitchController::create(&patchCtrls_->randomMode);
+        switches_[PARAM_SWITCH_OSC_USE_SSWT] =
+            SwitchController::create(&patchCtrls_->oscUseWavetable);
+        switches_[PARAM_SWITCH_RANDOM_AMOUNT] =
+            SwitchController::create(&patchCtrls_->randomAmount);
+        switches_[PARAM_SWITCH_RANDOM_MODE] =
+            SwitchController::create(&patchCtrls_->randomMode);
 
-        cvs_[PARAM_CV_LOOPER_SPEED] = CvController::create(&patchCvs_->looperSpeed, kCvLpCoeff, kCvOffset, kCvMult, 0.005f);
-        cvs_[PARAM_CV_LOOPER_START] = CvController::create(&patchCvs_->looperStart, 0.5f);
-        cvs_[PARAM_CV_LOOPER_LENGTH] = CvController::create(&patchCvs_->looperLength, 0.5f);
-        cvs_[PARAM_CV_OSC_PITCH] = CvController::create(&patchCvs_->oscPitch, 0.995f, 0.f, 1.f, 0.f);
-        cvs_[PARAM_CV_OSC_DETUNE] = CvController::create(&patchCvs_->oscDetune, 0.5f, kCvOffset, kCvMult, 0.f);
-        cvs_[PARAM_CV_FILTER_CUTOFF] = CvController::create(&patchCvs_->filterCutoff, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
-        cvs_[PARAM_CV_FILTER_RESONANCE] = CvController::create(&patchCvs_->filterResonance);
-        cvs_[PARAM_CV_RESONATOR_TUNE] = CvController::create(&patchCvs_->resonatorTune, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
-        cvs_[PARAM_CV_RESONATOR_FEEDBACK] = CvController::create(&patchCvs_->resonatorFeedback);
-        cvs_[PARAM_CV_ECHO_DENSITY] = CvController::create(&patchCvs_->echoDensity, 0.995f);
+        cvs_[PARAM_CV_LOOPER_SPEED] = CvController::create(
+            &patchCvs_->looperSpeed, kCvLpCoeff, kCvOffset, kCvMult, 0.005f);
+        cvs_[PARAM_CV_LOOPER_START] =
+            CvController::create(&patchCvs_->looperStart, 0.5f);
+        cvs_[PARAM_CV_LOOPER_LENGTH] =
+            CvController::create(&patchCvs_->looperLength, 0.5f);
+        cvs_[PARAM_CV_OSC_PITCH] =
+            CvController::create(&patchCvs_->oscPitch, 0.995f, 0.f, 1.f, 0.f);
+        cvs_[PARAM_CV_OSC_DETUNE] = CvController::create(
+            &patchCvs_->oscDetune, 0.5f, kCvOffset, kCvMult, 0.f);
+        cvs_[PARAM_CV_FILTER_CUTOFF] = CvController::create(
+            &patchCvs_->filterCutoff, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
+        cvs_[PARAM_CV_FILTER_RESONANCE] =
+            CvController::create(&patchCvs_->filterResonance);
+        cvs_[PARAM_CV_RESONATOR_TUNE] = CvController::create(
+            &patchCvs_->resonatorTune, kCvLpCoeff, kCvOffset, kCvMult, 0.f);
+        cvs_[PARAM_CV_RESONATOR_FEEDBACK] =
+            CvController::create(&patchCvs_->resonatorFeedback);
+        cvs_[PARAM_CV_ECHO_DENSITY] =
+            CvController::create(&patchCvs_->echoDensity, 0.995f);
         cvs_[PARAM_CV_ECHO_REPEATS] = CvController::create(&patchCvs_->echoRepeats);
-        cvs_[PARAM_CV_AMBIENCE_SPACETIME] = CvController::create(&patchCvs_->ambienceSpacetime, 0.995f);
-        cvs_[PARAM_CV_AMBIENCE_DECAY] = CvController::create(&patchCvs_->ambienceDecay);
+        cvs_[PARAM_CV_AMBIENCE_SPACETIME] =
+            CvController::create(&patchCvs_->ambienceSpacetime, 0.995f);
+        cvs_[PARAM_CV_AMBIENCE_DECAY] =
+            CvController::create(&patchCvs_->ambienceDecay);
 
         leds_[LED_INPUT] = Led::create(INPUT_LED_PARAM, LedType::LED_TYPE_PARAM);
         leds_[LED_INPUT_PEAK] = Led::create(INPUT_PEAK_LED_PARAM);
@@ -346,87 +328,137 @@ public:
         leds_[LED_ARROW_LEFT] = Led::create(LEFT_ARROW_PARAM);
         leds_[LED_ARROW_RIGHT] = Led::create(RIGHT_ARROW_PARAM);
 
-        midiOuts_[PARAM_MIDI_LOOPER_LENGTH] = MidiController::create(&patchCtrls_->looperLength, ParamMidi::PARAM_MIDI_LOOPER_LENGTH);
-        midiOuts_[PARAM_MIDI_LOOPER_SPEED] = MidiController::create(&patchCtrls_->looperSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED);
-        midiOuts_[PARAM_MIDI_LOOPER_START] = MidiController::create(&patchCtrls_->looperStart, ParamMidi::PARAM_MIDI_LOOPER_START);
-        midiOuts_[PARAM_MIDI_LOOPER_SOS] = MidiController::create(&patchCtrls_->looperSos, ParamMidi::PARAM_MIDI_LOOPER_SOS);
-        midiOuts_[PARAM_MIDI_LOOPER_FILTER] = MidiController::create(&patchCtrls_->looperFilter, ParamMidi::PARAM_MIDI_LOOPER_FILTER);
-        midiOuts_[PARAM_MIDI_LOOPER_RECORDING] = MidiController::create(&patchCtrls_->looperRecording, ParamMidi::PARAM_MIDI_LOOPER_RECORDING);
-        midiOuts_[PARAM_MIDI_LOOPER_RESAMPLING] = MidiController::create(&patchCtrls_->looperResampling, ParamMidi::PARAM_MIDI_LOOPER_RESAMPLING);
-        midiOuts_[PARAM_MIDI_LOOPER_VOL] = MidiController::create(&patchCtrls_->looperVol, ParamMidi::PARAM_MIDI_LOOPER_VOL);
-        midiOuts_[PARAM_MIDI_OSC_PITCH] = MidiController::create(&tune_, ParamMidi::PARAM_MIDI_OSC_PITCH);
-        midiOuts_[PARAM_MIDI_OSC_DETUNE] = MidiController::create(&patchCtrls_->oscDetune, ParamMidi::PARAM_MIDI_OSC_DETUNE);
-        midiOuts_[PARAM_MIDI_OSC_UNISON] = MidiController::create(&unison_, ParamMidi::PARAM_MIDI_OSC_UNISON);
-        midiOuts_[PARAM_MIDI_OSC1_VOL] = MidiController::create(&patchCtrls_->osc1Vol, ParamMidi::PARAM_MIDI_OSC1_VOL);
-        midiOuts_[PARAM_MIDI_OSC2_VOL] = MidiController::create(&patchCtrls_->osc2Vol, ParamMidi::PARAM_MIDI_OSC2_VOL);
-        midiOuts_[PARAM_MIDI_FILTER_CUTOFF] = MidiController::create(&patchCtrls_->filterCutoff, ParamMidi::PARAM_MIDI_FILTER_CUTOFF);
-        midiOuts_[PARAM_MIDI_FILTER_RESONANCE] = MidiController::create(&patchCtrls_->filterResonance, ParamMidi::PARAM_MIDI_FILTER_RESONANCE);
-        midiOuts_[PARAM_MIDI_FILTER_MODE] = MidiController::create(&patchCtrls_->filterMode, ParamMidi::PARAM_MIDI_FILTER_MODE);
-        midiOuts_[PARAM_MIDI_FILTER_POSITION] = MidiController::create(&patchCtrls_->filterPosition, ParamMidi::PARAM_MIDI_FILTER_POSITION);
-        midiOuts_[PARAM_MIDI_FILTER_VOL] = MidiController::create(&patchCtrls_->filterVol, ParamMidi::PARAM_MIDI_FILTER_VOL);
-        midiOuts_[PARAM_MIDI_RESONATOR_TUNE] = MidiController::create(&patchCtrls_->resonatorTune, ParamMidi::PARAM_MIDI_RESONATOR_TUNE);
-        midiOuts_[PARAM_MIDI_RESONATOR_FEEDBACK] = MidiController::create(&patchCtrls_->resonatorFeedback, ParamMidi::PARAM_MIDI_RESONATOR_FEEDBACK);
-        midiOuts_[PARAM_MIDI_RESONATOR_DISSONANCE] = MidiController::create(&patchCtrls_->resonatorDissonance, ParamMidi::PARAM_MIDI_RESONATOR_DISSONANCE);
-        midiOuts_[PARAM_MIDI_RESONATOR_VOL] = MidiController::create(&patchCtrls_->resonatorVol, ParamMidi::PARAM_MIDI_RESONATOR_VOL);
-        midiOuts_[PARAM_MIDI_ECHO_REPEATS] = MidiController::create(&patchCtrls_->echoRepeats, ParamMidi::PARAM_MIDI_ECHO_REPEATS);
-        midiOuts_[PARAM_MIDI_ECHO_DENSITY] = MidiController::create(&patchCtrls_->echoDensity, ParamMidi::PARAM_MIDI_ECHO_DENSITY);
-        midiOuts_[PARAM_MIDI_ECHO_FILTER] = MidiController::create(&patchCtrls_->echoFilter, ParamMidi::PARAM_MIDI_ECHO_FILTER);
-        midiOuts_[PARAM_MIDI_ECHO_VOL] = MidiController::create(&patchCtrls_->echoVol, ParamMidi::PARAM_MIDI_ECHO_VOL);
-        midiOuts_[PARAM_MIDI_AMBIENCE_DECAY] = MidiController::create(&patchCtrls_->ambienceDecay, ParamMidi::PARAM_MIDI_AMBIENCE_DECAY);
-        midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME] = MidiController::create(&patchCtrls_->ambienceSpacetime, ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME);
-        midiOuts_[PARAM_MIDI_AMBIENCE_AUTOPAN] = MidiController::create(&patchCtrls_->ambienceAutoPan, ParamMidi::PARAM_MIDI_AMBIENCE_AUTOPAN);
-        midiOuts_[PARAM_MIDI_AMBIENCE_VOL] = MidiController::create(&patchCtrls_->ambienceVol, ParamMidi::PARAM_MIDI_AMBIENCE_VOL);
-        midiOuts_[PARAM_MIDI_MOD_LEVEL] = MidiController::create(&patchCtrls_->modLevel, ParamMidi::PARAM_MIDI_MOD_LEVEL);
-        midiOuts_[PARAM_MIDI_MOD_SPEED] = MidiController::create(&patchCtrls_->modSpeed, ParamMidi::PARAM_MIDI_MOD_SPEED);
-        midiOuts_[PARAM_MIDI_MOD_TYPE] = MidiController::create(&patchCtrls_->modType, ParamMidi::PARAM_MIDI_MOD_TYPE);
-        midiOuts_[PARAM_MIDI_INPUT_VOL] = MidiController::create(&patchCtrls_->inputVol, ParamMidi::PARAM_MIDI_INPUT_VOL);
-        midiOuts_[PARAM_MIDI_RANDOM_MODE] = MidiController::create(&patchCtrls_->randomMode, ParamMidi::PARAM_MIDI_RANDOM_MODE);
-        midiOuts_[PARAM_MIDI_RANDOM_AMOUNT] = MidiController::create(&patchCtrls_->randomAmount, ParamMidi::PARAM_MIDI_RANDOM_AMOUNT);
-        midiOuts_[PARAM_MIDI_OSC_USE_SSWT] = MidiController::create(&patchCtrls_->oscUseWavetable, ParamMidi::PARAM_MIDI_OSC_USE_SSWT);
-        midiOuts_[PARAM_MIDI_RANDOMIZE] = MidiController::create(&randomize_, ParamMidi::PARAM_MIDI_RANDOMIZE);
+        midiOuts_[PARAM_MIDI_LOOPER_LENGTH] = MidiController::create(
+            &patchCtrls_->looperLength, ParamMidi::PARAM_MIDI_LOOPER_LENGTH);
+        midiOuts_[PARAM_MIDI_LOOPER_SPEED] = MidiController::create(
+            &patchCtrls_->looperSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED);
+        midiOuts_[PARAM_MIDI_LOOPER_START] = MidiController::create(
+            &patchCtrls_->looperStart, ParamMidi::PARAM_MIDI_LOOPER_START);
+        midiOuts_[PARAM_MIDI_LOOPER_SOS] = MidiController::create(
+            &patchCtrls_->looperSos, ParamMidi::PARAM_MIDI_LOOPER_SOS);
+        midiOuts_[PARAM_MIDI_LOOPER_FILTER] = MidiController::create(
+            &patchCtrls_->looperFilter, ParamMidi::PARAM_MIDI_LOOPER_FILTER);
+        midiOuts_[PARAM_MIDI_LOOPER_RECORDING] = MidiController::create(
+            &patchCtrls_->looperRecording, ParamMidi::PARAM_MIDI_LOOPER_RECORDING);
+        midiOuts_[PARAM_MIDI_LOOPER_RESAMPLING] = MidiController::create(
+            &patchCtrls_->looperResampling, ParamMidi::PARAM_MIDI_LOOPER_RESAMPLING);
+        midiOuts_[PARAM_MIDI_LOOPER_VOL] = MidiController::create(
+            &patchCtrls_->looperVol, ParamMidi::PARAM_MIDI_LOOPER_VOL);
+        midiOuts_[PARAM_MIDI_OSC_PITCH] =
+            MidiController::create(&tune_, ParamMidi::PARAM_MIDI_OSC_PITCH);
+        midiOuts_[PARAM_MIDI_OSC_DETUNE] = MidiController::create(
+            &patchCtrls_->oscDetune, ParamMidi::PARAM_MIDI_OSC_DETUNE);
+        midiOuts_[PARAM_MIDI_OSC_UNISON] =
+            MidiController::create(&unison_, ParamMidi::PARAM_MIDI_OSC_UNISON);
+        midiOuts_[PARAM_MIDI_OSC1_VOL] = MidiController::create(
+            &patchCtrls_->osc1Vol, ParamMidi::PARAM_MIDI_OSC1_VOL);
+        midiOuts_[PARAM_MIDI_OSC2_VOL] = MidiController::create(
+            &patchCtrls_->osc2Vol, ParamMidi::PARAM_MIDI_OSC2_VOL);
+        midiOuts_[PARAM_MIDI_FILTER_CUTOFF] = MidiController::create(
+            &patchCtrls_->filterCutoff, ParamMidi::PARAM_MIDI_FILTER_CUTOFF);
+        midiOuts_[PARAM_MIDI_FILTER_RESONANCE] = MidiController::create(
+            &patchCtrls_->filterResonance, ParamMidi::PARAM_MIDI_FILTER_RESONANCE);
+        midiOuts_[PARAM_MIDI_FILTER_MODE] = MidiController::create(
+            &patchCtrls_->filterMode, ParamMidi::PARAM_MIDI_FILTER_MODE);
+        midiOuts_[PARAM_MIDI_FILTER_POSITION] = MidiController::create(
+            &patchCtrls_->filterPosition, ParamMidi::PARAM_MIDI_FILTER_POSITION);
+        midiOuts_[PARAM_MIDI_FILTER_VOL] = MidiController::create(
+            &patchCtrls_->filterVol, ParamMidi::PARAM_MIDI_FILTER_VOL);
+        midiOuts_[PARAM_MIDI_RESONATOR_TUNE] = MidiController::create(
+            &patchCtrls_->resonatorTune, ParamMidi::PARAM_MIDI_RESONATOR_TUNE);
+        midiOuts_[PARAM_MIDI_RESONATOR_FEEDBACK] = MidiController::create(
+            &patchCtrls_->resonatorFeedback, ParamMidi::PARAM_MIDI_RESONATOR_FEEDBACK);
+        midiOuts_[PARAM_MIDI_RESONATOR_DISSONANCE] =
+            MidiController::create(&patchCtrls_->resonatorDissonance,
+                ParamMidi::PARAM_MIDI_RESONATOR_DISSONANCE);
+        midiOuts_[PARAM_MIDI_RESONATOR_VOL] = MidiController::create(
+            &patchCtrls_->resonatorVol, ParamMidi::PARAM_MIDI_RESONATOR_VOL);
+        midiOuts_[PARAM_MIDI_ECHO_REPEATS] = MidiController::create(
+            &patchCtrls_->echoRepeats, ParamMidi::PARAM_MIDI_ECHO_REPEATS);
+        midiOuts_[PARAM_MIDI_ECHO_DENSITY] = MidiController::create(
+            &patchCtrls_->echoDensity, ParamMidi::PARAM_MIDI_ECHO_DENSITY);
+        midiOuts_[PARAM_MIDI_ECHO_FILTER] = MidiController::create(
+            &patchCtrls_->echoFilter, ParamMidi::PARAM_MIDI_ECHO_FILTER);
+        midiOuts_[PARAM_MIDI_ECHO_VOL] = MidiController::create(
+            &patchCtrls_->echoVol, ParamMidi::PARAM_MIDI_ECHO_VOL);
+        midiOuts_[PARAM_MIDI_AMBIENCE_DECAY] = MidiController::create(
+            &patchCtrls_->ambienceDecay, ParamMidi::PARAM_MIDI_AMBIENCE_DECAY);
+        midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME] = MidiController::create(
+            &patchCtrls_->ambienceSpacetime, ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME);
+        midiOuts_[PARAM_MIDI_AMBIENCE_AUTOPAN] = MidiController::create(
+            &patchCtrls_->ambienceAutoPan, ParamMidi::PARAM_MIDI_AMBIENCE_AUTOPAN);
+        midiOuts_[PARAM_MIDI_AMBIENCE_VOL] = MidiController::create(
+            &patchCtrls_->ambienceVol, ParamMidi::PARAM_MIDI_AMBIENCE_VOL);
+        midiOuts_[PARAM_MIDI_MOD_LEVEL] = MidiController::create(
+            &patchCtrls_->modLevel, ParamMidi::PARAM_MIDI_MOD_LEVEL);
+        midiOuts_[PARAM_MIDI_MOD_SPEED] = MidiController::create(
+            &patchCtrls_->modSpeed, ParamMidi::PARAM_MIDI_MOD_SPEED);
+        midiOuts_[PARAM_MIDI_MOD_TYPE] = MidiController::create(
+            &patchCtrls_->modType, ParamMidi::PARAM_MIDI_MOD_TYPE);
+        midiOuts_[PARAM_MIDI_INPUT_VOL] = MidiController::create(
+            &patchCtrls_->inputVol, ParamMidi::PARAM_MIDI_INPUT_VOL);
+        midiOuts_[PARAM_MIDI_RANDOM_MODE] = MidiController::create(
+            &patchCtrls_->randomMode, ParamMidi::PARAM_MIDI_RANDOM_MODE);
+        midiOuts_[PARAM_MIDI_RANDOM_AMOUNT] = MidiController::create(
+            &patchCtrls_->randomAmount, ParamMidi::PARAM_MIDI_RANDOM_AMOUNT);
+        midiOuts_[PARAM_MIDI_OSC_USE_SSWT] = MidiController::create(
+            &patchCtrls_->oscUseWavetable, ParamMidi::PARAM_MIDI_OSC_USE_SSWT);
+        midiOuts_[PARAM_MIDI_RANDOMIZE] =
+            MidiController::create(&randomize_, ParamMidi::PARAM_MIDI_RANDOMIZE);
 
-        midiOuts_[PARAM_MIDI_LOOPER_SPEED_CV] = MidiController::create(&patchCvs_->looperSpeed, ParamMidi::PARAM_MIDI_LOOPER_SPEED_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_LOOPER_START_CV] = MidiController::create(&patchCvs_->looperStart, ParamMidi::PARAM_MIDI_LOOPER_START_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_LOOPER_LENGTH_CV] = MidiController::create(&patchCvs_->looperLength, ParamMidi::PARAM_MIDI_LOOPER_LENGTH_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_OSC_PITCH_CV] = MidiController::create(&patchCvs_->oscPitch, ParamMidi::PARAM_MIDI_OSC_PITCH_CV);
-        midiOuts_[PARAM_MIDI_OSC_DETUNE_CV] = MidiController::create(&patchCvs_->oscDetune, ParamMidi::PARAM_MIDI_OSC_DETUNE_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_FILTER_CUTOFF_CV] = MidiController::create(&patchCvs_->filterCutoff, ParamMidi::PARAM_MIDI_FILTER_CUTOFF_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_RESONATOR_TUNE_CV] = MidiController::create(&patchCvs_->resonatorTune, ParamMidi::PARAM_MIDI_RESONATOR_TUNE_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_ECHO_DENSITY_CV] = MidiController::create(&patchCvs_->echoDensity, ParamMidi::PARAM_MIDI_ECHO_DENSITY_CV, 0, 0.5f, 0.6666667f);
-        midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME_CV] = MidiController::create(&patchCvs_->ambienceSpacetime, ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_LOOPER_SPEED_CV] =
+            MidiController::create(&patchCvs_->looperSpeed,
+                ParamMidi::PARAM_MIDI_LOOPER_SPEED_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_LOOPER_START_CV] =
+            MidiController::create(&patchCvs_->looperStart,
+                ParamMidi::PARAM_MIDI_LOOPER_START_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_LOOPER_LENGTH_CV] =
+            MidiController::create(&patchCvs_->looperLength,
+                ParamMidi::PARAM_MIDI_LOOPER_LENGTH_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_OSC_PITCH_CV] = MidiController::create(
+            &patchCvs_->oscPitch, ParamMidi::PARAM_MIDI_OSC_PITCH_CV);
+        midiOuts_[PARAM_MIDI_OSC_DETUNE_CV] =
+            MidiController::create(&patchCvs_->oscDetune,
+                ParamMidi::PARAM_MIDI_OSC_DETUNE_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_FILTER_CUTOFF_CV] =
+            MidiController::create(&patchCvs_->filterCutoff,
+                ParamMidi::PARAM_MIDI_FILTER_CUTOFF_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_RESONATOR_TUNE_CV] =
+            MidiController::create(&patchCvs_->resonatorTune,
+                ParamMidi::PARAM_MIDI_RESONATOR_TUNE_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_ECHO_DENSITY_CV] =
+            MidiController::create(&patchCvs_->echoDensity,
+                ParamMidi::PARAM_MIDI_ECHO_DENSITY_CV, 0, 0.5f, 0.6666667f);
+        midiOuts_[PARAM_MIDI_AMBIENCE_SPACETIME_CV] =
+            MidiController::create(&patchCvs_->ambienceSpacetime,
+                ParamMidi::PARAM_MIDI_AMBIENCE_SPACETIME_CV, 0, 0.5f, 0.6666667f);
 
         recordButton_ = RecordButtonController::create(leds_[LED_RECORD]);
         randomButton_ = RandomButtonController::create(leds_[LED_RANDOM]);
         shiftButton_ = ShiftButtonController::create(leds_[LED_SHIFT]);
-        modCvButton_ = ModCvButtonController::create(leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
+        modCvButton_ = ModCvButtonController::create(
+            leds_[LED_MOD_AMOUNT], leds_[LED_CV_AMOUNT]);
     }
-    ~Ui()
-    {
+    ~Ui() {
         FloatArray::destroy(patchState_->inputLevel);
         FloatArray::destroy(patchState_->efModLevel);
         TapTempo::destroy(patchState_->tempo);
-        for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
             KnobController::destroy(knobs_[i]);
         }
-        for (size_t i = 0; i < PARAM_FADER_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_FADER_LAST; i++) {
             FaderController::destroy(faders_[i]);
         }
-        for (size_t i = 0; i < PARAM_CV_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_CV_LAST; i++) {
             CvController::destroy(cvs_[i]);
         }
-        for (size_t i = 0; i < PARAM_SWITCH_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_SWITCH_LAST; i++) {
             SwitchController::destroy(switches_[i]);
         }
-        for (size_t i = 0; i < LED_LAST; i++)
-        {
+        for (size_t i = 0; i < LED_LAST; i++) {
             Led::destroy(leds_[i]);
         }
-        for (size_t i = 0; i < PARAM_MIDI_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_MIDI_LAST; i++) {
             MidiController::destroy(midiOuts_[i]);
         }
         RecordButtonController::destroy(recordButton_);
@@ -435,29 +467,25 @@ public:
         ModCvButtonController::destroy(modCvButton_);
     }
 
-    static Ui* create(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
-    {
+    static Ui* create(
+        PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState) {
         return new Ui(patchCtrls, patchCvs, patchState);
     }
 
-    static void destroy(Ui* obj)
-    {
+    static void destroy(Ui* obj) {
         delete obj;
     }
 
-    void LoadConfig()
-    {
+    void LoadConfig() {
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".cfg");
-        if (resource)
-        {
+        if (resource) {
             Configuration* configuration = (Configuration*)resource->getData();
             vOctScale1_ = (float)configuration->voct1_scale / UINT16_MAX;
             vOctOffset1_ = (float)configuration->voct1_offset / UINT16_MAX;
             vOctScale2_ = (float)configuration->voct2_scale / UINT16_MAX;
             vOctOffset2_ = (float)configuration->voct2_offset / UINT16_MAX;
-
             PatchParameterId voctParam = paramCvMap[PARAM_CV_OSC_PITCH];
-            patchState_->c4 = (float)configuration->c4 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
+            patchState_->c5 = (float)configuration->c5 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
             PatchParameterId pitchParam = paramKnobMap[PARAM_KNOB_OSC_PITCH];
             patchState_->pitchZero = (float)configuration->pitch_zero / (configuration->params_max[pitchParam] - configuration->params_min[pitchParam]);
             PatchParameterId speedParam = paramKnobMap[PARAM_KNOB_LOOPER_SPEED];
@@ -465,15 +493,38 @@ public:
             patchState_->softTakeover = configuration->soft_takeover;
             patchState_->modAttenuverters = configuration->mod_attenuverters;
             patchState_->cvAttenuverters = configuration->cv_attenuverters;
+            hwRevision_ = configuration->revision;
+            if (hwRevision_ == 2)
+            {
+                vOctScale0_ = (float)configuration->voct0_scale / UINT16_MAX;
+                vOctOffset0_ = (float)configuration->voct0_offset / UINT16_MAX;
+                patchState_->c2 = (float)configuration->c2 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
+            }
+        }
+        else
+        {
+            // Sensible default values (the same are set in the firmware).
+            hwRevision_ = 0;
+            vOctScale0_ = 7780619.f / UINT16_MAX;
+            vOctOffset0_ = -520480.f / UINT16_MAX;
+            vOctScale1_ = 7843773.f / UINT16_MAX;
+            vOctOffset1_ = -537472.f / UINT16_MAX;
+            vOctScale2_ = 7761870.f / UINT16_MAX;
+            vOctOffset2_ = -490801.f / UINT16_MAX;
+            patchState_->c2 = 1102.f / 4096.f;
+            patchState_->c5 = 2334.f / 4096.f;
+            patchState_->pitchZero = 2128.f / 4041.f;
+            patchState_->speedZero = 2192.f / 4041.f;
+            patchState_->softTakeover = false;
+            patchState_->modAttenuverters = false;
+            patchState_->cvAttenuverters = false;
         }
         Resource::destroy(resource);
     }
 
-    void LoadAltParams()
-    {
+    void LoadAltParams() {
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".alt");
-        if (resource != NULL)
-        {
+        if (resource != NULL) {
             int16_t* cfg = (int16_t*)resource->getData();
             knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->SetValue(cfg[0] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Ambience auto-pan
             knobs_[PARAM_KNOB_ECHO_DENSITY]->SetValue(cfg[1] / 8192.f, LockableParamName::PARAM_LOCKABLE_ALT); // Echo filter
@@ -489,11 +540,9 @@ public:
         Resource::destroy(resource);
     }
 
-    void LoadModParams()
-    {
+    void LoadModParams() {
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".mod");
-        if (resource)
-        {
+        if (resource) {
             int16_t* cfg = (int16_t*)resource->getData();
             knobs_[PARAM_KNOB_AMBIENCE_DECAY]->SetValue(cfg[0] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Ambience decay mod amount
             knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->SetValue(cfg[1] / 8192.f, LockableParamName::PARAM_LOCKABLE_MOD); // Ambience spacetime mod amount
@@ -512,11 +561,9 @@ public:
         Resource::destroy(resource);
     }
 
-    void LoadCvParams()
-    {
+    void LoadCvParams() {
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".cv");
-        if (resource)
-        {
+        if (resource) {
             int16_t* cfg = (int16_t*)resource->getData();
             knobs_[PARAM_KNOB_AMBIENCE_DECAY]->SetValue(cfg[0] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Ambience decay cv amount
             knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->SetValue(cfg[1] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Ambience spacetime cv amount
@@ -528,18 +575,16 @@ public:
             knobs_[PARAM_KNOB_LOOPER_SPEED]->SetValue(cfg[7] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Looper speed cv amount
             knobs_[PARAM_KNOB_LOOPER_START]->SetValue(cfg[8] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Looper start cv amount
             knobs_[PARAM_KNOB_OSC_DETUNE]->SetValue(cfg[9] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Osc detune cv amount
-            knobs_[PARAM_KNOB_OSC_PITCH]->SetValue(cfg[10] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Osc pitch cv amount
+            //knobs_[PARAM_KNOB_OSC_PITCH]->SetValue(cfg[10] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Osc pitch cv amount
             knobs_[PARAM_KNOB_RESONATOR_FEEDBACK]->SetValue(cfg[11] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator feedback cv amount
             knobs_[PARAM_KNOB_RESONATOR_TUNE]->SetValue(cfg[12] / 8192.f, LockableParamName::PARAM_LOCKABLE_CV); // Resonator tune cv amount
         }
         Resource::destroy(resource);
     }
 
-    void LoadMainParams()
-    {
+    void LoadMainParams() {
         Resource* resource = Resource::load(PATCH_SETTINGS_NAME ".prm");
-        if (resource)
-        {
+        if (resource) {
             int16_t* cfg = (int16_t*)resource->getData();
             knobs_[PARAM_KNOB_AMBIENCE_DECAY]->SetValue(cfg[0] / 8192.f); // Ambience decay
             knobs_[PARAM_KNOB_AMBIENCE_SPACETIME]->SetValue(cfg[1] / 8192.f); // Ambience spacetime
@@ -571,8 +616,7 @@ public:
         Resource::destroy(resource);
     }
 
-    void SaveParametersConfig(FuncMode funcMode)
-    {
+    void SaveParametersConfig(FuncMode funcMode) {
         /*
         if (!parameterChangedSinceLastSave_)
         {
@@ -580,13 +624,12 @@ public:
         }
         */
 
-        //saving_ = true;
-        //parameterChangedSinceLastSave_ = false;
+        // saving_ = true;
+        // parameterChangedSinceLastSave_ = false;
 
-        float values[MAX_PATCH_SETTINGS]{};
+        float values[MAX_PATCH_SETTINGS] {};
 
-        switch (funcMode)
-        {
+        switch (funcMode) {
         case FUNC_MODE_ALT:
             values[0] = patchCtrls_->ambienceAutoPan;
             values[1] = patchCtrls_->echoFilter;
@@ -625,7 +668,7 @@ public:
             values[7] = patchCtrls_->looperSpeedCvAmount;
             values[8] = patchCtrls_->looperStartCvAmount;
             values[9] = patchCtrls_->oscDetuneCvAmount;
-            values[10] = patchCtrls_->oscPitchCvAmount;
+            values[10] = 1.f; //patchCtrls_->oscPitchCvAmount;
             values[11] = patchCtrls_->resonatorFeedbackCvAmount;
             values[12] = patchCtrls_->resonatorTuneCvAmount;
             break;
@@ -661,13 +704,13 @@ public:
         }
 
         // Start the save process.
-        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
+        getInitialisingPatchProcessor()->patch->sendMidi(
+            MidiMessage(USB_COMMAND_SINGLE_BYTE, START, 0, 0)); // send MIDI START
 
         // Send the file index - 0: "oneiroi.prm", 1: "oneiroi.alt", 2: "oneiroi.mod", 3: "oneiroi.cv"
         getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage::cp(0, funcMode));
 
-        for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++)
-        {
+        for (size_t i = 0; i < MAX_PATCH_SETTINGS; i++) {
             // Convert to 14-bit signed int.
             int16_t value = rintf(values[i] * 8192);
             // Send the parameter's value.
@@ -675,16 +718,15 @@ public:
         }
 
         // Finish the process.
-        getInitialisingPatchProcessor()->patch->sendMidi(MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
+        getInitialisingPatchProcessor()->patch->sendMidi(
+            MidiMessage(USB_COMMAND_SINGLE_BYTE, STOP, 0, 0)); // send MIDI STOP
     }
 
     // Callback
-    void ProcessButton(PatchButtonId bid, uint16_t value, uint16_t samples)
-    {
+    void ProcessButton(PatchButtonId bid, uint16_t value, uint16_t samples) {
         bool on = value != 0;
 
-        switch (bid)
-        {
+        switch (bid) {
         case SYNC_IN:
             patchState_->tempo->trigger(on, samples);
             patchState_->syncIn = on;
@@ -693,15 +735,13 @@ public:
         case RECORD_IN:
 #ifdef USE_RECORD_THRESHOLD
             recordPressed_ = on;
-            if (on)
-            {
+            if (on) {
                 // Start recording.
                 recordingState_ = RecordingState::RECORDING_STATE_START;
                 samplesSinceRecordingStarted_ = 0;
                 samplesSinceRecordInReceived_ = 0;
             }
-            else if (RecordingState::RECORDING_STATE_RECORDING == recordingState_)
-            {
+            else if (RecordingState::RECORDING_STATE_RECORDING == recordingState_) {
                 // If the input goes down when the looper was recording, stop
                 // it (gate mode).
                 recordButton_->Set(0);
@@ -716,11 +756,9 @@ public:
             break;
 
         case RANDOM_IN:
-            if (on)
-            {
+            if (on) {
                 leds_[LED_RANDOM]->Blink();
-                if (!randomize_)
-                {
+                if (!randomize_) {
                     patchState_->randomSlew = 1.f / kRandomSlewSamples;
                     patchState_->randomHasSlew = false;
                     randomize_ = true;
@@ -753,15 +791,12 @@ public:
     }
 
     // Callback.
-    void ProcessMidi(MidiMessage msg)
-    {
+    void ProcessMidi(MidiMessage msg) {
         return;
 
-        if (msg.isControlChange())
-        {
-            if (msg.getControllerNumber() < PARAM_MIDI_LAST)
-            {
-                //midiOuts_[msg.getControllerNumber()]->SetValue(msg.getControllerValue() / 127.0f);
+        if (msg.isControlChange()) {
+            if (msg.getControllerNumber() < PARAM_MIDI_LAST) {
+                // midiOuts_[msg.getControllerNumber()]->SetValue(msg.getControllerValue() / 127.0f);
             }
         }
         /*
@@ -772,52 +807,53 @@ public:
         */
     }
 
-    void HandleLeds()
-    {
+    void HandleLeds() {
         float level = patchState_->inputLevel.getMean();
-        if (level < 0.7f)
-        {
+        if (level < 0.7f) {
             leds_[LED_INPUT]->Set(Map(level, 0.f, 1.f, 0.5f, 1.f));
             leds_[LED_INPUT_PEAK]->Off();
         }
-        else
-        {
+        else {
             leds_[LED_INPUT]->Off();
             leds_[LED_INPUT_PEAK]->On();
         }
 
         float v = Map(patchState_->modValue, -0.5f, 0.5f, 0.49f, 0.5f + patchCtrls_->modLevel * 0.5f);
-        if (v < 0.5f) v = 0;
+        if (v < 0.5f)
+        {
+            v = 0;
+        }
 
         leds_[LED_MOD]->Set(v);
 
-        if (patchState_->clockTick)
-        {
+        if (patchState_->clockTick) {
             leds_[LED_SYNC]->Blink();
         }
 
-        if (oscPitchCenterTrigger_.Process(patchState_->oscPitchCenterFlag) || oscOctaveTrigger_.Process(patchState_->oscOctaveFlag) ||
-            oscUnisonCenterTrigger_.Process(patchState_->oscUnisonCenterFlag) || looperSpeedLockTrigger_.Process(patchState_->looperSpeedLockFlag) ||
-            modTypeLockTrigger_.Process(patchState_->modTypeLockFlag) || modSpeedLockTrigger_.Process(patchState_->modSpeedLockFlag) ||
-            filterModeTrigger_.Process(patchState_->filterModeFlag) || filterPositionTrigger_.Process(patchState_->filterPositionFlag)
-        ) {
+        if (oscPitchCenterTrigger_.Process(patchState_->oscPitchCenterFlag) ||
+            oscOctaveTrigger_.Process(patchState_->oscOctaveFlag) ||
+            oscUnisonCenterTrigger_.Process(patchState_->oscUnisonCenterFlag) ||
+            looperSpeedLockTrigger_.Process(patchState_->looperSpeedLockFlag) ||
+            modTypeLockTrigger_.Process(patchState_->modTypeLockFlag) ||
+            modSpeedLockTrigger_.Process(patchState_->modSpeedLockFlag) ||
+            filterModeTrigger_.Process(patchState_->filterModeFlag) ||
+            filterPositionTrigger_.Process(patchState_->filterPositionFlag)) {
             leds_[LED_ARROW_LEFT]->Blink(2);
             leds_[LED_ARROW_RIGHT]->Blink(2, false, false);
         }
     }
 
-    void HandleCatchUp()
-    {
+    void HandleCatchUp() {
         bool moving = false;
         bool wasCatchingUp = false;
 
-        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
-        {
-            CatchUpController* ctrl = (i < PARAM_KNOB_LAST) ? (CatchUpController*)knobs_[i] : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
+        for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
+            CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
+                ? (CatchUpController*)knobs_[i]
+                : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
             bool m = ctrl->Process();
             patchState_->moving[i] = m;
-            if (m && !moving)
-            {
+            if (m && !moving) {
                 movingParam_ = ctrl;
                 moving = true;
             }
@@ -830,67 +866,56 @@ public:
         }
         */
 
-        if (!patchState_->softTakeover)
-        {
+        if (!patchState_->softTakeover) {
             return;
         }
 
-        if (movingParam_ && !movingParam_->IsMoving())
-        {
+        if (movingParam_ && !movingParam_->IsMoving()) {
             movingParam_ = NULL;
             moving = false;
             wasCatchingUp = true;
         }
 
-        if (moving)
-        {
+        if (moving) {
             ParamCatchUp catchUp = movingParam_->GetCatchUpState();
 
-            if (ParamCatchUp::PARAM_CATCH_UP_LEFT == catchUp)
-            {
+            if (ParamCatchUp::PARAM_CATCH_UP_LEFT == catchUp) {
                 leds_[LED_ARROW_LEFT]->On();
                 leds_[LED_ARROW_RIGHT]->Off();
                 wasCatchingUp = true;
             }
-            else if (ParamCatchUp::PARAM_CATCH_UP_RIGHT == catchUp)
-            {
+            else if (ParamCatchUp::PARAM_CATCH_UP_RIGHT == catchUp) {
                 leds_[LED_ARROW_LEFT]->Off();
                 leds_[LED_ARROW_RIGHT]->On();
                 wasCatchingUp = true;
             }
-            else if (ParamCatchUp::PARAM_CATCH_UP_DONE == catchUp)
-            {
+            else if (ParamCatchUp::PARAM_CATCH_UP_DONE == catchUp) {
                 // Done catching up.
                 leds_[LED_ARROW_LEFT]->Blink(2, true);
                 leds_[LED_ARROW_RIGHT]->Blink(2, true);
             }
         }
-        else if (wasCatchingUp)
-        {
+        else if (wasCatchingUp) {
             leds_[LED_ARROW_LEFT]->Off();
             leds_[LED_ARROW_RIGHT]->Off();
             wasCatchingUp = false;
         }
     }
 
-    void HandleLedButtons()
-    {
+    void HandleLedButtons() {
         recordButton_->Process();
         randomButton_->Process();
         shiftButton_->Process();
         modCvButton_->Process();
 
         FuncMode funcMode = patchState_->funcMode;
-        if (modCvButton_->IsPressed())
-        {
+        if (modCvButton_->IsPressed()) {
             // Handle long press for saving.
-            if (samplesSinceModCvPressed_ < kSaveLimit)
-            {
+            if (samplesSinceModCvPressed_ < kSaveLimit) {
                 samplesSinceModCvPressed_++;
                 leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->On();
             }
-            else if (!saveFlag_)
-            {
+            else if (!saveFlag_) {
                 // Save.
                 saveFlag_ = true;
                 saving_ = true;
@@ -898,24 +923,20 @@ public:
                 leds_[shiftButton_->IsOn() ? LED_CV_AMOUNT : LED_MOD_AMOUNT]->Off();
             }
         }
-        else if (shiftButton_->IsOn() && !modCvButton_->IsOn())
-        {
+        else if (shiftButton_->IsOn() && !modCvButton_->IsOn()) {
             // Only SHIFT button is on.
-            if (saveFlag_)
-            {
+            if (saveFlag_) {
                 // Saving button has been released.
                 samplesSinceModCvPressed_ = 0;
                 saveFlag_ = false;
 
                 // Restore previous button state.
-                if (FuncMode::FUNC_MODE_CV == patchState_->funcMode)
-                {
+                if (FuncMode::FUNC_MODE_CV == patchState_->funcMode) {
                     modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_CV);
                     modCvButton_->Set(true);
                 }
             }
-            else if (wasCvMap_)
-            {
+            else if (wasCvMap_) {
                 // If we were editing CV mapping and MOD/CV button turns off,
                 // exit from CV mapping.
                 modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_NONE);
@@ -923,17 +944,14 @@ public:
                 wasCvMap_ = false;
                 samplesSinceModCvPressed_ = 0;
             }
-            else
-            {
+            else {
                 funcMode = FuncMode::FUNC_MODE_ALT;
                 wasCvMap_ = false;
             }
         }
-        else if (!shiftButton_->IsOn() && modCvButton_->IsOn())
-        {
+        else if (!shiftButton_->IsOn() && modCvButton_->IsOn()) {
             // Only MOD/CV button is on.
-            if (wasCvMap_)
-            {
+            if (wasCvMap_) {
                 // If we were editing CV mapping and SHIFT button turns off,
                 // exit from CV mapping.
                 modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_NONE);
@@ -941,45 +959,37 @@ public:
                 wasCvMap_ = false;
                 samplesSinceModCvPressed_ = 0;
             }
-            else
-            {
+            else {
                 funcMode = FuncMode::FUNC_MODE_MOD;
             }
         }
-        else if (shiftButton_->IsOn() && modCvButton_->IsOn())
-        {
+        else if (shiftButton_->IsOn() && modCvButton_->IsOn()) {
             // Both SHIFT and MOD/CV buttons are on.
             funcMode = FuncMode::FUNC_MODE_CV;
             wasCvMap_ = true;
         }
-        else if (!shiftButton_->IsOn() && !modCvButton_->IsOn())
-        {
+        else if (!shiftButton_->IsOn() && !modCvButton_->IsOn()) {
             // Neither SHIFT nor MOD/CV buttons are on.
-            if (saveFlag_)
-            {
+            if (saveFlag_) {
                 // Saving button has been released.
                 saveFlag_ = false;
 
                 // Restore previous button state.
-                if (FuncMode::FUNC_MODE_MOD == patchState_->funcMode)
-                {
+                if (FuncMode::FUNC_MODE_MOD == patchState_->funcMode) {
                     modCvButton_->SetFuncMode(FuncMode::FUNC_MODE_MOD);
                     modCvButton_->Set(true);
                 }
             }
-            else
-            {
+            else {
                 funcMode = FuncMode::FUNC_MODE_NONE;
             }
             samplesSinceModCvPressed_ = 0;
         }
 
-        if (funcMode != patchState_->funcMode)
-        {
+        if (funcMode != patchState_->funcMode) {
             patchState_->funcMode = funcMode;
 
-            for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
-            {
+            for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
                 knobs_[i]->SetFuncMode(patchState_->funcMode);
             }
             recordButton_->SetFuncMode(patchState_->funcMode);
@@ -987,19 +997,16 @@ public:
             modCvButton_->SetFuncMode(patchState_->funcMode);
         }
 
-        switch (patchState_->funcMode)
-        {
+        switch (patchState_->funcMode) {
         case FuncMode::FUNC_MODE_NONE:
             patchCtrls_->looperRecording = recordButton_->IsOn();
 
             // Handle long press of the random button for slewing.
-            if (randomButton_->IsPressed())
-            {
+            if (randomButton_->IsPressed()) {
                 leds_[LED_RANDOM]->On();
                 samplesSinceRandomPressed_++;
             }
-            else if (samplesSinceRandomPressed_ > 0 && !randomize_)
-            {
+            else if (samplesSinceRandomPressed_ > 0 && !randomize_) {
                 // Random button has been released.
                 doRandomSlew_ = samplesSinceRandomPressed_ > kRandomSlewSamples;
                 patchState_->randomHasSlew = doRandomSlew_;
@@ -1011,43 +1018,37 @@ public:
             break;
 
         default:
-            if (recordButton_->IsPressed() || randomButton_->IsPressed())
-            {
-                if (samplesSinceRecordOrRandomPressed_ < kResetLimit)
-                {
+            if (recordButton_->IsPressed() || randomButton_->IsPressed()) {
+                if (samplesSinceRecordOrRandomPressed_ < kResetLimit) {
                     samplesSinceRecordOrRandomPressed_++;
                 }
-                else if (recordAndRandomTrigger_.Process(recordButton_->IsPressed() && randomButton_->IsPressed()))
-                {
+                else if (recordAndRandomTrigger_.Process(recordButton_->IsPressed() &&
+                             randomButton_->IsPressed())) {
                     recordAndRandomPressed_ = true;
                     // Reset parameters.
-                    for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++)
-                    {
-                        CatchUpController* ctrl = (i < PARAM_KNOB_LAST) ? (CatchUpController*)knobs_[i] : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
+                    for (size_t i = 0; i < PARAM_KNOB_LAST + PARAM_FADER_LAST; i++) {
+                        CatchUpController* ctrl = (i < PARAM_KNOB_LAST)
+                            ? (CatchUpController*)knobs_[i]
+                            : (CatchUpController*)faders_[i - PARAM_KNOB_LAST];
                         ctrl->Reset();
                     }
                 }
-                // recordAndRandomPressed_ assures that if the last operation was
-                // the reset of parameters, the next operation may be performed only
-                // if the buttons are released.
-                else if (!recordAndRandomPressed_)
-                {
-                    if (FuncMode::FUNC_MODE_ALT == patchState_->funcMode)
-                    {
-                        if (clearLooperTrigger_.Process(recordButton_->IsPressed()))
-                        {
+                // recordAndRandomPressed_ assures that if the last operation
+                // was the reset of parameters, the next operation may be
+                // performed only if the buttons are released.
+                else if (!recordAndRandomPressed_) {
+                    if (FuncMode::FUNC_MODE_ALT == patchState_->funcMode) {
+                        if (clearLooperTrigger_.Process(recordButton_->IsPressed())) {
                             // Clear the looper's buffer.
                             patchState_->clearLooperFlag = true;
                         }
-                        if (!undoRedo_ && randomButton_->IsOn())
-                        {
+                        if (!undoRedo_ && randomButton_->IsOn()) {
                             undoRedo_ = true;
                         }
                     }
                 }
             }
-            else
-            {
+            else {
                 samplesSinceRecordOrRandomPressed_ = 0;
                 recordAndRandomPressed_ = false;
                 recordAndRandomTrigger_.Process(0);
@@ -1058,48 +1059,39 @@ public:
         }
 
 #ifdef USE_RECORD_THRESHOLD
-        if (RecordingState::RECORDING_STATE_IDLE != recordingState_)
-        {
+        if (RecordingState::RECORDING_STATE_IDLE != recordingState_) {
             // Trigger: end recording or as soon as the audio input goes
             // silent or after a number of samples has passed.
-            switch (recordingState_)
-            {
+            switch (recordingState_) {
             case RecordingState::RECORDING_STATE_START:
-                if (samplesSinceRecordInReceived_ < kRecordGateLimit)
-                {
+                if (samplesSinceRecordInReceived_ < kRecordGateLimit) {
                     samplesSinceRecordInReceived_++;
-                    if (!recordPressed_)
-                    {
+                    if (!recordPressed_) {
                         recordingState_ = RecordingState::RECORDING_STATE_WAITING_ONSET;
                         samplesSinceRecordInReceived_ = 0;
                     }
                 }
-                else if (recordPressed_)
-                {
+                else if (recordPressed_) {
                     recordingState_ = RecordingState::RECORDING_STATE_RECORDING;
                     recordButton_->Set(1);
                 }
                 break;
             case RecordingState::RECORDING_STATE_WAITING_ONSET:
-                if (samplesSinceRecordInReceived_ < kRecordOnsetLimit)
-                {
+                if (samplesSinceRecordInReceived_ < kRecordOnsetLimit) {
                     samplesSinceRecordInReceived_++;
-                    if (patchState_->inputLevel.getMean() >= kRecordOnsetLevel)
-                    {
+                    if (patchState_->inputLevel.getMean() >= kRecordOnsetLevel) {
                         recordingState_ = RecordingState::RECORDING_STATE_RECORDING;
                         recordButton_->Set(1);
                     }
                 }
-                else
-                {
+                else {
                     recordingState_ = RecordingState::RECORDING_STATE_STOP;
                 }
                 break;
             case RecordingState::RECORDING_STATE_RECORDING:
-                if (!recordPressed_)
-                {
-                    if (patchState_->inputLevel.getMean() <= kRecordWindupLevel || samplesSinceRecordingStarted_ >= kLooperChannelBufferLength)
-                    {
+                if (!recordPressed_) {
+                    if (patchState_->inputLevel.getMean() <= kRecordWindupLevel ||
+                        samplesSinceRecordingStarted_ >= kLooperChannelBufferLength) {
                         recordingState_ = RecordingState::RECORDING_STATE_STOP;
                     }
                     samplesSinceRecordingStarted_ += patchState_->blockSize;
@@ -1118,21 +1110,20 @@ public:
 #endif // USE_RECORD_THRESHOLD
     }
 
-    void UndoRedo()
-    {
-        if (RandomMode::RANDOM_OSC == randomMode_ || RandomMode::RANDOM_ALL == randomMode_)
-        {
+    void UndoRedo() {
+        if (RandomMode::RANDOM_OSC == randomMode_ ||
+            RandomMode::RANDOM_ALL == randomMode_) {
             knobs_[PARAM_KNOB_OSC_PITCH]->UndoRedo();
             knobs_[PARAM_KNOB_OSC_DETUNE]->UndoRedo();
         }
-        if (RandomMode::RANDOM_LOOPER == randomMode_ || RandomMode::RANDOM_ALL == randomMode_)
-        {
+        if (RandomMode::RANDOM_LOOPER == randomMode_ ||
+            RandomMode::RANDOM_ALL == randomMode_) {
             knobs_[PARAM_KNOB_LOOPER_SPEED]->UndoRedo();
             knobs_[PARAM_KNOB_LOOPER_START]->UndoRedo();
             knobs_[PARAM_KNOB_LOOPER_LENGTH]->UndoRedo();
         }
-        if (RandomMode::RANDOM_EFFECTS == randomMode_ || RandomMode::RANDOM_ALL == randomMode_)
-        {
+        if (RandomMode::RANDOM_EFFECTS == randomMode_ ||
+            RandomMode::RANDOM_ALL == randomMode_) {
             knobs_[PARAM_KNOB_FILTER_CUTOFF]->UndoRedo();
             knobs_[PARAM_KNOB_FILTER_RESONANCE]->UndoRedo();
 
@@ -1149,43 +1140,36 @@ public:
         undoRedo_ = false;
     }
 
-    void Randomize()
-    {
+    void Randomize() {
         // Value (approx): All = 0, Oscillators = 0.5, Looper = 0.75, Fx = 1
-        if (patchCtrls_->randomMode > 0.9f)
-        {
+        if (patchCtrls_->randomMode > 0.9f) {
             randomizeTask_ = 2;
         }
-        else if (patchCtrls_->randomMode > 0.7f)
-        {
+        else if (patchCtrls_->randomMode > 0.7f) {
             randomizeTask_ = 1;
         }
-        else if (patchCtrls_->randomMode > 0.4f)
-        {
+        else if (patchCtrls_->randomMode > 0.4f) {
             randomizeTask_ = 0;
         }
 
         // Value: 0 = Mid, 0.33 = Low, 1.00 = High
         RandomAmount randomAmount = RandomAmount::RANDOM_MID;
-        if (patchCtrls_->randomAmount > 0.9f)
-        {
+        if (patchCtrls_->randomAmount > 0.9f) {
             randomAmount = RandomAmount::RANDOM_HIGH;
         }
-        else if (patchCtrls_->randomAmount > 0.2f)
-        {
+        else if (patchCtrls_->randomAmount > 0.2f) {
             randomAmount = RandomAmount::RANDOM_LOW;
         }
 
-        if (randomMode_ == RandomMode::RANDOM_ALL)
-        {
+        if (randomMode_ == RandomMode::RANDOM_ALL) {
             // Spread the randomization in time.
             randomizeTask_ = (randomizeTask_ + 1) % 3;
         }
 
-        switch (randomizeTask_)
-        {
+        switch (randomizeTask_) {
         case 0:
-            knobs_[PARAM_KNOB_OSC_PITCH]->Randomize(randomAmount, LockableParamName::PARAM_LOCKABLE_MAIN, true);
+            knobs_[PARAM_KNOB_OSC_PITCH]->Randomize(
+                randomAmount, LockableParamName::PARAM_LOCKABLE_MAIN, true);
             knobs_[PARAM_KNOB_OSC_DETUNE]->Randomize(randomAmount);
             break;
         case 1:
@@ -1208,65 +1192,50 @@ public:
             break;
         }
 
-        if (RandomMode::RANDOM_ALL == randomMode_)
-        {
-            if (randomizeTask_ == 2)
-            {
+        if (RandomMode::RANDOM_ALL == randomMode_) {
+            if (randomizeTask_ == 2) {
                 randomizeTask_ = -1;
                 randomize_ = false;
             }
         }
-        else
-        {
+        else {
             randomize_ = false;
         }
     }
 
-    void Startup()
-    {
-        switch (patchState_->startupPhase)
-        {
-        case StartupPhase::STARTUP_1:
-        {
-            if (!leds_[LED_RECORD]->IsBlinking())
-            {
+    void Startup() {
+        switch (patchState_->startupPhase) {
+        case StartupPhase::STARTUP_1: {
+            if (!leds_[LED_RECORD]->IsBlinking()) {
                 leds_[LED_RECORD]->Blink(PATCH_VERSION_MAJOR);
             }
             leds_[LED_RECORD]->Read();
-            if (!leds_[LED_RECORD]->IsBlinking())
-            {
+            if (!leds_[LED_RECORD]->IsBlinking()) {
                 patchState_->startupPhase = StartupPhase::STARTUP_2;
             }
             return;
         }
-        case StartupPhase::STARTUP_2:
-        {
+        case StartupPhase::STARTUP_2: {
             static int i = 0;
-            if (i >= kStartupWaitSamples)
-            {
+            if (i >= kStartupWaitSamples) {
                 patchState_->startupPhase = StartupPhase::STARTUP_3;
             }
             i++;
             return;
         }
-        case StartupPhase::STARTUP_3:
-        {
-            if (!leds_[LED_RANDOM]->IsBlinking())
-            {
+        case StartupPhase::STARTUP_3: {
+            if (!leds_[LED_RANDOM]->IsBlinking()) {
                 leds_[LED_RANDOM]->Blink(PATCH_VERSION_MINOR);
             }
             leds_[LED_RANDOM]->Read();
-            if (!leds_[LED_RANDOM]->IsBlinking())
-            {
+            if (!leds_[LED_RANDOM]->IsBlinking()) {
                 patchState_->startupPhase = StartupPhase::STARTUP_4;
             }
             return;
         }
-        case StartupPhase::STARTUP_4:
-        {
+        case StartupPhase::STARTUP_4: {
             static int i = 0;
-            if (i >= kStartupWaitSamples)
-            {
+            if (i >= kStartupWaitSamples) {
                 patchState_->startupPhase = StartupPhase::STARTUP_5;
             }
             i++;
@@ -1282,42 +1251,34 @@ public:
     }
 
     // Called at block rate
-    void Poll()
-    {
-        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase)
-        {
+    void Poll() {
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase) {
             Startup();
 
             return;
         }
 
-        for (size_t i = 0; i < PARAM_KNOB_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_KNOB_LAST; i++) {
             knobs_[i]->Read(ParamKnob(i));
         }
 
-        for (size_t i = 0; i < PARAM_FADER_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_FADER_LAST; i++) {
             faders_[i]->Read(ParamFader(i));
         }
 
-        for (size_t i = 0; i < PARAM_SWITCH_LAST - 1; i++)
-        {
+        for (size_t i = 0; i < PARAM_SWITCH_LAST - 1; i++) {
             switches_[i]->Read(ParamSwitch(i));
         }
 
-        for (size_t i = 0; i < PARAM_CV_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_CV_LAST; i++) {
             cvs_[i]->Read(ParamCv(i));
         }
 
-        for (size_t i = 0; i < LED_LAST; i++)
-        {
+        for (size_t i = 0; i < LED_LAST; i++) {
             leds_[i]->Read();
         }
 
-        for (size_t i = 0; i < PARAM_MIDI_LAST; i++)
-        {
+        for (size_t i = 0; i < PARAM_MIDI_LAST; i++) {
             midiOuts_[i]->Process();
         }
 
@@ -1327,39 +1288,50 @@ public:
 
         patchState_->modActive = patchCtrls_->modLevel > 0.1f;
 
-        patchCtrls_->oscOctave = octaveQuantizer_.Process(octave_) + 1;
-        if (patchCtrls_->oscOctave != lastOctave_)
-        {
+        patchCtrls_->oscOctave = rintf(octave_ / (patchState_->pitchZero / 4.f)) + 1;
+        if (patchCtrls_->oscOctave != lastOctave_) {
             lastOctave_ = patchCtrls_->oscOctave;
             patchState_->oscOctaveFlag = true;
         }
-        else
-        {
+        else {
             patchState_->oscOctaveFlag = false;
         }
 
+        float vOctAmount = 1.f;
+        /*
         float vOctAmount = patchCtrls_->oscPitchCvAmount;
-        if (patchState_->cvAttenuverters)
-        {
+        if (patchState_->cvAttenuverters) {
             vOctAmount = CenterMap(patchCtrls_->oscPitchCvAmount);
             // Deadband in the center.
-            if (vOctAmount >= -0.1f && vOctAmount <= 0.1f)
-            {
+            if (vOctAmount >= -0.1f && vOctAmount <= 0.1f) {
                 vOctAmount = 0.f;
             }
         }
+        */
         float note = vOctOffset1_ + patchCvs_->oscPitch * vOctAmount * vOctScale1_;
-        if (patchCvs_->oscPitch > patchState_->c4)
-        {
+        if (patchCvs_->oscPitch >= patchState_->c5) {
             note = vOctOffset2_ + patchCvs_->oscPitch * vOctAmount * vOctScale2_;
         }
-        float interval = note - noteCv_;
-        if (interval < -0.4f || interval > 0.4f)
+
+        if (hwRevision_ == 2)
         {
+            if (patchCvs_->oscPitch < patchState_->c2) {
+                note = vOctOffset0_ + patchCvs_->oscPitch * vOctAmount * vOctScale0_;
+            }
+        }
+        else {
+            if (note > 0 && note < 3.f)
+            {
+                // Compensate for the two lowest semitones.
+                note = 0;
+            }
+        }
+
+        float interval = note - noteCv_;
+        if (interval < -0.4f || interval > 0.4f) {
             noteCv_ = note;
         }
-        else
-        {
+        else {
             noteCv_ += 0.1f * interval;
         }
         float tune = CenterMap(tune_, -0.5f, 0.5f, patchState_->pitchZero);
@@ -1367,23 +1339,19 @@ public:
         note = 12 * note + 12 * patchCtrls_->oscOctave;
         notePot_ += 0.1f * (note - notePot_);
         patchCtrls_->oscPitch = M2F(notePot_ + noteCv_);
-        if (tune >= -0.01f && tune <= 0.01f)
-        {
+        if (tune >= -0.01f && tune <= 0.01f) {
             patchState_->oscPitchCenterFlag = true;
         }
-        else
-        {
+        else {
             patchState_->oscPitchCenterFlag = false;
         }
 
         patchCtrls_->oscUnison = Clamp(CenterMap(unison_), -1.f, 1.f);
-        if (patchCtrls_->oscUnison >= -0.03f && patchCtrls_->oscUnison <= 0.03f)
-        {
+        if (patchCtrls_->oscUnison >= -0.03f && patchCtrls_->oscUnison <= 0.03f) {
             patchCtrls_->oscUnison = 0.f;
             patchState_->oscUnisonCenterFlag = true;
         }
-        else
-        {
+        else {
             patchState_->oscUnisonCenterFlag = false;
         }
 
@@ -1391,56 +1359,44 @@ public:
         patchCtrls_->looperVol = MapExpo(looperVol_);
         patchCtrls_->osc1Vol = MapExpo(osc1Vol_);
         patchCtrls_->osc2Vol = MapExpo(osc2Vol_);
-        if (patchCtrls_->filterVol >= kOne)
-        {
+        if (patchCtrls_->filterVol >= kOne) {
             patchCtrls_->filterVol = 1.f;
         }
-        if (patchCtrls_->resonatorVol >= kOne)
-        {
+        if (patchCtrls_->resonatorVol >= kOne) {
             patchCtrls_->resonatorVol = 1.f;
         }
-        if (patchCtrls_->echoVol >= kOne)
-        {
+        if (patchCtrls_->echoVol >= kOne) {
             patchCtrls_->echoVol = 1.f;
         }
-        if (patchCtrls_->ambienceVol >= kOne)
-        {
+        if (patchCtrls_->ambienceVol >= kOne) {
             patchCtrls_->ambienceVol = 1.f;
         }
 
         // Value (approx): All = 0, Oscillators = 0.5, Looper = 0.75, Fx = 1
-        if (patchCtrls_->randomMode > 0.9f)
-        {
+        if (patchCtrls_->randomMode > 0.9f) {
             randomMode_ = RandomMode::RANDOM_EFFECTS;
         }
-        else if (patchCtrls_->randomMode > 0.7f)
-        {
+        else if (patchCtrls_->randomMode > 0.7f) {
             randomMode_ = RandomMode::RANDOM_LOOPER;
         }
-        else if (patchCtrls_->randomMode > 0.4f)
-        {
+        else if (patchCtrls_->randomMode > 0.4f) {
             randomMode_ = RandomMode::RANDOM_OSC;
         }
-        else
-        {
+        else {
             randomMode_ = RandomMode::RANDOM_ALL;
         }
 
-        if (fadeOutOutput_)
-        {
+        if (fadeOutOutput_) {
             patchState_->outLevel -= kOutputFadeInc;
-            if (patchState_->outLevel <= 0)
-            {
+            if (patchState_->outLevel <= 0) {
                 patchState_->outLevel = 0;
-                if (saving_)
-                {
+                if (saving_) {
                     SaveParametersConfig(FuncMode::FUNC_MODE_NONE);
                     SaveParametersConfig(FuncMode::FUNC_MODE_ALT);
                     SaveParametersConfig(FuncMode::FUNC_MODE_MOD);
                     SaveParametersConfig(FuncMode::FUNC_MODE_CV);
                     LedName activeLed = LED_MOD_AMOUNT;
-                    if (shiftButton_->IsOn())
-                    {
+                    if (shiftButton_->IsOn()) {
                         activeLed = LED_CV_AMOUNT;
                     }
                     leds_[activeLed]->Blink(2, false, !leds_[activeLed]->IsOn());
@@ -1448,39 +1404,32 @@ public:
                     fadeInOutput_ = true;
                     saving_ = false;
                 }
-                else
-                {
+                else {
                     fadeOutOutput_ = false;
                     fadeInOutput_ = true;
                 }
             }
         }
 
-        if (fadeInOutput_)
-        {
+        if (fadeInOutput_) {
             patchState_->outLevel += kOutputFadeInc;
-            if (patchState_->outLevel >= 1)
-            {
+            if (patchState_->outLevel >= 1) {
                 patchState_->outLevel = 1;
                 fadeInOutput_ = false;
             }
         }
 
-        if (randomize_)
-        {
+        if (randomize_) {
             Randomize();
         }
 
-        if (undoRedo_)
-        {
+        if (undoRedo_) {
             UndoRedo();
         }
 
-        if (doRandomSlew_)
-        {
+        if (doRandomSlew_) {
             randomSlewInc_ += patchState_->randomSlew;
-            if (randomSlewInc_ >= 1.f)
-            {
+            if (randomSlewInc_ >= 1.f) {
                 doRandomSlew_ = false;
                 leds_[LED_RANDOM]->Blink(2);
             }

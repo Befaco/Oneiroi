@@ -332,7 +332,8 @@ struct PatchState
 
     bool moving[23];
 
-    float c4;
+    float c2;
+    float c5;
     float pitchZero;
     float speedZero;
 

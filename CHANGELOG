@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.1.2 (2025-03-25)
+## 1.1.2 (2025-03-29)
 
 - fixed 0v-1v V/Oct CV range (<https://github.com/Befaco/Oneiroi/issues/37>)
+- removed V/Oct CV attenuation feature
 
 ## 1.1.1 (2024-12-14)
 
