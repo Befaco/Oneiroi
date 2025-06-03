@@ -1,9 +1,10 @@
 # Changelog
 
-## 1.1.2 (2025-03-29)
+## 1.2.0 (2025-04-27)
 
 - fixed 0v-1v V/Oct CV range (<https://github.com/Befaco/Oneiroi/issues/37>)
 - removed V/Oct CV attenuation feature
+- doubled supersaw pitch (it was half of both wt and sine)
 
 ## 1.1.1 (2024-12-14)
 

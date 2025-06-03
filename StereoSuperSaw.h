@@ -96,7 +96,7 @@ public:
     {
         size_t size = output.getSize();
 
-        ParameterInterpolator freqParam(&oldFreq_, freq * 0.5f, size);
+        ParameterInterpolator freqParam(&oldFreq_, freq, size);
 
         for (size_t i = 0; i < size; i++)
         {

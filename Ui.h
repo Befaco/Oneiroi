@@ -81,8 +81,15 @@ private:
 
     int samplesSinceShiftPressed_, samplesSinceRecordOrRandomPressed_,
         samplesSinceModCvPressed_, samplesSinceRecordInReceived_,
-        samplesSinceRecordingStarted_, samplesSinceRandomPressed_,
-        hwRevision_;
+        samplesSinceRecordingStarted_, samplesSinceRandomPressed_;
+
+    // - 0 > when the module hasn't been calibrated
+    // - 1 > when the module has been calibrated and is the old hw
+    // - 2 > when the module has been calibrated and is the new hw
+    //
+    // Mind that the module will act as if an old hw until calibrated, regardless
+    // of the true hw version.
+    int hwRevision_;
 
     bool wasCvMap_, recordAndRandomPressed_, recordPressed_, fadeOutOutput_,
         fadeInOutput_, parameterChangedSinceLastSave_, saving_, saveFlag_,
@@ -1334,15 +1341,18 @@ public:
         else {
             noteCv_ += 0.1f * interval;
         }
-        float tune = CenterMap(tune_, -0.5f, 0.5f, patchState_->pitchZero);
-        note = Modulate(tune, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
+
+        // tune_ is offset by half octave so that C is in the center.
+        note = Modulate(tune_ - 0.5f, patchCtrls_->oscPitchModAmount, patchState_->modValue, 0, 0, -1.f, 1.f, patchState_->modAttenuverters);
         note = 12 * note + 12 * patchCtrls_->oscOctave;
         notePot_ += 0.1f * (note - notePot_);
         patchCtrls_->oscPitch = M2F(notePot_ + noteCv_);
-        if (tune >= -0.01f && tune <= 0.01f) {
+        if ((int)(12 * (tune_ - 0.5f) + 12 * patchCtrls_->oscOctave) % 12 == 0)
+        {
             patchState_->oscPitchCenterFlag = true;
         }
-        else {
+        else
+        {
             patchState_->oscPitchCenterFlag = false;
         }
 
@@ -1358,6 +1368,9 @@ public:
         patchCtrls_->inputVol = MapExpo(inputVol_);
         patchCtrls_->looperVol = MapExpo(looperVol_);
         patchCtrls_->osc1Vol = MapExpo(osc1Vol_);
+        float b = Map(6.f * Power(10.f, osc1Vol_), 6.f, 60.f, 0.f, 1.f);
+        //b = osc1Vol_;
+        //patchCtrls_->osc1Vol = b;
         patchCtrls_->osc2Vol = MapExpo(osc2Vol_);
         if (patchCtrls_->filterVol >= kOne) {
             patchCtrls_->filterVol = 1.f;
