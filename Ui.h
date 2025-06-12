@@ -492,11 +492,11 @@ public:
             vOctScale2_ = (float)configuration->voct2_scale / UINT16_MAX;
             vOctOffset2_ = (float)configuration->voct2_offset / UINT16_MAX;
             PatchParameterId voctParam = paramCvMap[PARAM_CV_OSC_PITCH];
-            patchState_->c5 = (float)configuration->c5 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
+            patchState_->c5 = (float)configuration->c5 / 4095.f;
             PatchParameterId pitchParam = paramKnobMap[PARAM_KNOB_OSC_PITCH];
-            patchState_->pitchZero = (float)configuration->pitch_zero / (configuration->params_max[pitchParam] - configuration->params_min[pitchParam]);
+            patchState_->pitchZero = (float)configuration->pitch_zero / 4095.f;
             PatchParameterId speedParam = paramKnobMap[PARAM_KNOB_LOOPER_SPEED];
-            patchState_->speedZero = (float)configuration->speed_zero / (configuration->params_max[speedParam] - configuration->params_min[speedParam]);
+            patchState_->speedZero = (float)configuration->speed_zero / 4095.f;
             patchState_->softTakeover = configuration->soft_takeover;
             patchState_->modAttenuverters = configuration->mod_attenuverters;
             patchState_->cvAttenuverters = configuration->cv_attenuverters;
@@ -505,7 +505,7 @@ public:
             {
                 vOctScale0_ = (float)configuration->voct0_scale / UINT16_MAX;
                 vOctOffset0_ = (float)configuration->voct0_offset / UINT16_MAX;
-                patchState_->c2 = (float)configuration->c2 / (configuration->params_max[voctParam] - configuration->params_min[voctParam]);
+                patchState_->c2 = (float)configuration->c2 / 4095.f;
             }
         }
         else
@@ -518,8 +518,8 @@ public:
             vOctOffset1_ = -537472.f / UINT16_MAX;
             vOctScale2_ = 7761870.f / UINT16_MAX;
             vOctOffset2_ = -490801.f / UINT16_MAX;
-            patchState_->c2 = 1102.f / 4096.f;
-            patchState_->c5 = 2334.f / 4096.f;
+            patchState_->c2 = 1102.f / 4095.f;
+            patchState_->c5 = 2334.f / 4095.f;
             patchState_->pitchZero = 2128.f / 4041.f;
             patchState_->speedZero = 2192.f / 4041.f;
             patchState_->softTakeover = false;
