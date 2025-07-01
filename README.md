@@ -53,9 +53,34 @@ the online tool
 
 <https://pingdynasty.github.io/OwlWebControl/extended.html>
 
-## Calibration Procedure 
+## Calibration Procedure for >1.2 Patch/Firmware
 
-It calibrates V/OCT IN, and manual Controls range.
+It calibrates V/OCT IN, and Pitch/Speed Knobs mid position
+
+Updating the patch do not erase the calibration data, so no need to perform calibration after patch update.
+
+Only needed after module's assembly (usually preformed only at factory or by DIYers).
+
+
+  1- Power the module while holding [MOD AMT + SHIFT] buttons at the same time. 
+The [RECORD] button should light up red indicating you are in Calibration Mode.
+
+
+  2- Place both the PITCH knob and the VARISPEED knob in the middle, this allows for calibrating the center point
+  
+  3- Plug 2 Volts into V/OCT IN and push [RECORD] button. Now [SHIFT] button will light up red.
+
+  4- Plug 5 Volts into V/OCT IN and push [SHIFT] button. Now [RANDOM] button will light up red.
+
+  5- Plug 8 Volts into V/OCT IN and push [RANDOM] button. Now [MOD AMT] button will light up green. 
+
+  6- Push [MOD AMT] button to exit calibration mode.
+
+  
+
+  ## Calibration Procedure for 1.1 or older Patch/Firmware versions.
+  
+It calibrates V/OCT IN, Pitch/Speed Knobs mid position and manual Controls range.
 
 Updating the patch do not erase the calibration data, so no need to perform calibration after patch update.
 
