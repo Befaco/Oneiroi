@@ -61,11 +61,11 @@ Updating the patch do not erase the calibration data, so no need to perform cali
 
 Only needed after module's assembly (usually preformed only at factory or by DIYers).
 
-
-  1- Power the module while holding [MOD AMT + SHIFT] buttons at the same time. 
-The [RECORD] button should light up red indicating you are in Calibration Mode.
-
-
+ 
+  1- Ensure that there is 0 volts at the CV IN (either with no cable connected or with a cable that measures 0 volts).
+     Then, power on the module while simultaneously holding down the [MOD AMT] and [SHIFT] buttons.
+     The [RECORD] button should light up red, indicating that you are in Calibration Mode.
+     
   2- Place both the PITCH knob and the VARISPEED knob in the middle, this allows for calibrating the center point
   
   3- Plug 2 Volts into V/OCT IN and push [RECORD] button. Now [SHIFT] button will light up red.
