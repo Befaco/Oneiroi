@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 (2025-09-22)
+
+- fixed looper's start and length knobs not working when speed = 0 (https://github.com/Befaco/Oneiroi/issues/50)
+- removed LED indication of patch version (relying on the "loaded patch" information here
+  https://www.rebeltech.org/patch-library/device/)
+
 ## 1.2.0 (2025-05-12)
 
 - fixed 0v-1v V/Oct CV range (needs hw fix) (<https://github.com/Befaco/Oneiroi/issues/37>)

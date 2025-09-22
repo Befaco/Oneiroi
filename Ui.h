@@ -1210,57 +1210,14 @@ public:
         }
     }
 
-    void Startup() {
-        switch (patchState_->startupPhase) {
-        case StartupPhase::STARTUP_1: {
-            if (!leds_[LED_RECORD]->IsBlinking()) {
-                leds_[LED_RECORD]->Blink(PATCH_VERSION_MAJOR);
-            }
-            leds_[LED_RECORD]->Read();
-            if (!leds_[LED_RECORD]->IsBlinking()) {
-                patchState_->startupPhase = StartupPhase::STARTUP_2;
-            }
-            return;
-        }
-        case StartupPhase::STARTUP_2: {
-            static int i = 0;
-            if (i >= kStartupWaitSamples) {
-                patchState_->startupPhase = StartupPhase::STARTUP_3;
-            }
-            i++;
-            return;
-        }
-        case StartupPhase::STARTUP_3: {
-            if (!leds_[LED_RANDOM]->IsBlinking()) {
-                leds_[LED_RANDOM]->Blink(PATCH_VERSION_MINOR);
-            }
-            leds_[LED_RANDOM]->Read();
-            if (!leds_[LED_RANDOM]->IsBlinking()) {
-                patchState_->startupPhase = StartupPhase::STARTUP_4;
-            }
-            return;
-        }
-        case StartupPhase::STARTUP_4: {
-            static int i = 0;
-            if (i >= kStartupWaitSamples) {
-                patchState_->startupPhase = StartupPhase::STARTUP_5;
-            }
-            i++;
-            return;
-        }
-        case StartupPhase::STARTUP_5:
+    // Called at block rate
+    void Poll() {
+        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase) {
             LoadMainParams();
             LoadAltParams();
             LoadModParams();
             LoadCvParams();
             patchState_->startupPhase = StartupPhase::STARTUP_DONE;
-        }
-    }
-
-    // Called at block rate
-    void Poll() {
-        if (StartupPhase::STARTUP_DONE != patchState_->startupPhase) {
-            Startup();
 
             return;
         }
