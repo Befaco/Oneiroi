@@ -183,7 +183,6 @@ private:
     PatchState* patchState_;
     Pole* poles_[3];
 
-    BiquadFilter *notches_[2];
     EnvFollower *ef_[2];
 
     float amp_;
@@ -204,9 +203,6 @@ private:
         if (idx == 0)
         {
             poles_[0]->SetSemiOffset(offset);
-            poles_[1]->SetSemiOffset(offset + poles_[1]->GetSemiOffset());
-            poles_[2]->SetSemiOffset(offset + poles_[2]->GetSemiOffset());
-
         }
         else if (idx == 1)
         {
@@ -296,8 +292,6 @@ public:
 
         for (size_t i = 0; i < 2; i++)
         {
-            notches_[i] = BiquadFilter::create(patchState_->sampleRate);
-            notches_[i]->setNotch(8000.f, FilterStage::BUTTERWORTH_Q);
             ef_[i] = EnvFollower::create();
         }
 
@@ -317,7 +311,6 @@ public:
         }
         for (size_t i = 0; i < 2; i++)
         {
-            BiquadFilter::destroy(notches_[i]);
             EnvFollower::destroy(ef_[i]);
         }
     }
@@ -372,9 +365,6 @@ public:
 
             oLeft *= amp_;
             oRight *= amp_;
-
-            oLeft = notches_[LEFT_CHANNEL]->process(oLeft);
-            oRight = notches_[RIGHT_CHANNEL]->process(oRight);
 
             leftOut[i] = CheapEqualPowerCrossFade(lIn, oLeft * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);
             rightOut[i] = CheapEqualPowerCrossFade(rIn, oRight * kResoMakeupGain, patchCtrls_->resonatorVol, 1.4f);

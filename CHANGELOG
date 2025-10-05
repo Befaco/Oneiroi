@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2 (2025-10-03)
+
+- fixed unwanted resonator harmonics (https://github.com/Befaco/Oneiroi/issues/38)
+
 ## 1.2.1 (2025-09-22)
 
 - fixed looper's start and length knobs not working when speed = 0 (https://github.com/Befaco/Oneiroi/issues/50)
