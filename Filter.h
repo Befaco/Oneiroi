@@ -9,7 +9,7 @@
 
 enum FilterMode
 {
-    LP,
+    LP_,
     BP,
     HP,
     CF,
@@ -230,7 +230,7 @@ private:
         }
         else
         {
-            mode = FilterMode::LP;
+            mode = FilterMode::LP_;
         }
 
         if (mode == mode_)
@@ -251,7 +251,7 @@ private:
 
         switch (mode_)
         {
-        case FilterMode::LP:
+        case FilterMode::LP_:
             {
                 filters_[LEFT_CHANNEL]->setLowPass(cutoff, reso_);
                 filters_[RIGHT_CHANNEL]->setLowPass(cutoff, reso_);
@@ -320,7 +320,7 @@ public:
             ef_[i] = EnvFollower::create();
         }
 
-        mode_ = lastMode_ = FilterMode::LP;
+        mode_ = lastMode_ = FilterMode::LP_;
         freq_ = 22000.f;
         amp_ = Db2A(120);
     }

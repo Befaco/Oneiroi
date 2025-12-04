@@ -9,7 +9,7 @@ private:
     enum FilterType
     {
         NO_FILTER,
-        LP,
+        LP_,
         HP,
     };
 
@@ -27,7 +27,7 @@ private:
     {
         switch (filter_)
         {
-        case FilterType::LP:
+        case FilterType::LP_:
             lpfs_[LEFT_CHANNEL]->setLowPass(freq_, 0.55f);
             lpfs_[RIGHT_CHANNEL]->setLowPass(freq_, 0.55f);
             break;
@@ -78,7 +78,7 @@ public:
     {
         if (value <= 0.45f)
         {
-            filter_ = FilterType::LP;
+            filter_ = FilterType::LP_;
             lpfMix_ = Map(value, 0.f, 0.45f, 0.f, 1.f);
             freq_ = Map(lpfMix_, 0.f, 1.f, 500.f, 2000.f);
             UpdateFilter();
@@ -102,7 +102,7 @@ public:
     {
         switch (filter_)
         {
-        case FilterType::LP:
+        case FilterType::LP_:
             leftOut = LinearCrossFade(lpfs_[LEFT_CHANNEL]->process(leftIn), leftIn, lpfMix_);
             rightOut = LinearCrossFade(lpfs_[RIGHT_CHANNEL]->process(rightIn), rightIn, lpfMix_);
             break;
