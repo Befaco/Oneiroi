@@ -245,9 +245,11 @@ private:
     {
         filterGain_ = kFilterLpGainMin;
 
-        const float cutoffRaw = Clamp(MapLog(value, 0.f, 1.f, 10.f, 22000.f), 10.f, 22000.f);
+        const float maxCutoff = 0.49f * patchState_->sampleRate;
+        const float cutoffRaw = Clamp(MapLog(value, 0.f, 1.f, 10.f, maxCutoff), 10.f, maxCutoff);
         // VCV change: filter cutoff to avoid too abrupt a change, called once per block
         ONE_POLE(cutoff, cutoffRaw, lp_coeff);
+        cutoff = Clamp(cutoff, 10.f, maxCutoff);
 
         switch (mode_)
         {
@@ -273,18 +275,21 @@ private:
                 filters_[RIGHT_CHANNEL]->setHighPass(cutoff, reso_);
                 // Shut the filter off when the frequency is really high.
                 float g = MapExpo(resoValue_, 0.f, 1.f, kFilterHpGainMax, kFilterHpGainMin);
-                filterGain_ = cutoff >= 20000.f ? Map(cutoff, 15000, 20000, g, 0.f) : g;
+                const float hpFadeStart = maxCutoff * 0.75f;
+                filterGain_ = cutoff >= hpFadeStart ? Map(cutoff, hpFadeStart, maxCutoff, g, 0.f) : g;
                 break;
             }
         case FilterMode::CF:
-            float f = Clamp(Map(value, 0.f, 1.f, 100.f, 15000.f), 100.f, 15000.f);
-            float r = Clamp(VariableCrossFade(0.f, 0.8f, resoValue_, 0.9f), 0.f, 0.8f);
-            combs_[LEFT_CHANNEL]->SetFrequency(f);
-            combs_[LEFT_CHANNEL]->SetResonance(r);
-            combs_[RIGHT_CHANNEL]->SetFrequency(f);
-            combs_[RIGHT_CHANNEL]->SetResonance(r);
-            filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterCombGainMax, kFilterCombGainMin);
-            break;
+            {
+                float f = Clamp(Map(value, 0.f, 1.f, 100.f, maxCutoff), 100.f, maxCutoff);
+                float r = Clamp(VariableCrossFade(0.f, 0.8f, resoValue_, 0.9f), 0.f, 0.8f);
+                combs_[LEFT_CHANNEL]->SetFrequency(f);
+                combs_[LEFT_CHANNEL]->SetResonance(r);
+                combs_[RIGHT_CHANNEL]->SetFrequency(f);
+                combs_[RIGHT_CHANNEL]->SetResonance(r);
+                filterGain_ = MapExpo(resoValue_, 0.f, 1.f, kFilterCombGainMax, kFilterCombGainMin);
+                break;
+            }
         }
         noise_.SetFreq(cutoff);
     }

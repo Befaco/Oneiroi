@@ -11,9 +11,9 @@ private:
     Oneiroi* oneiroi_;
     Clock* clock_;
 
-    PatchCtrls patchCtrls;
-    PatchCvs patchCvs;
-    PatchState patchState;
+    PatchCtrls patchCtrls{};
+    PatchCvs patchCvs{};
+    PatchState patchState{};
 
 public:
     OneiroiPatch()

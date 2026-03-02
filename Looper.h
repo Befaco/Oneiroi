@@ -392,6 +392,7 @@ public:
         startFade_ = false;
         boc_ = true;
         cleared_ = false;
+        triggered_ = false;
         fade_ = false;
         triggerFadeIndex_ = 0;
         triggerFadeVolume_ = 0;

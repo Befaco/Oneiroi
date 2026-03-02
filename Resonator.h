@@ -155,8 +155,12 @@ private:
 
     void SetFreq()
     {
-        lpfs_[LEFT_CHANNEL]->setLowPass(M2F(lf_) + filter_, reso_);
-        lpfs_[RIGHT_CHANNEL]->setLowPass(M2F(rf_) + filter_, reso_);
+        const float maxCutoff = sampleRate_ * 0.49f;
+        const float leftCutoff = Clamp(M2F(lf_) + filter_, 1.f, maxCutoff);
+        const float rightCutoff = Clamp(M2F(rf_) + filter_, 1.f, maxCutoff);
+
+        lpfs_[LEFT_CHANNEL]->setLowPass(leftCutoff, reso_);
+        lpfs_[RIGHT_CHANNEL]->setLowPass(rightCutoff, reso_);
     }
 
     void SetNote()

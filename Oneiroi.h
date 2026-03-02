@@ -50,12 +50,16 @@ private:
 
     FilterPosition filterPosition_, lastFilterPosition_;
 
+
 public:
     Oneiroi(PatchCtrls* patchCtrls, PatchCvs* patchCvs, PatchState* patchState)
     {
         patchCtrls_ = patchCtrls;
         patchCvs_ = patchCvs;
         patchState_ = patchState;
+
+        filterPosition_ = FilterPosition::POSITION_1;
+        lastFilterPosition_ = FilterPosition::POSITION_1;
 
         looper_ = Looper::create(patchCtrls_, patchCvs_, patchState_);
         wtBuffer_ = WaveTableBuffer::create(looper_->GetBuffer(), patchState_->sampleRate);
@@ -138,7 +142,6 @@ public:
         inputDcFilter_->process(buffer, buffer);
 
         const size_t size = buffer.getSize();
-
         // Input leds.
         for (size_t i = 0; i < size; i++)
         {
