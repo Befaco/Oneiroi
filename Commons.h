@@ -135,10 +135,10 @@ constexpr float kFilterCombGainMax = 0.2f;
 
 constexpr float kResoGainMin = 0.5f;
 constexpr float kResoGainMax = 1.2f;
-constexpr float kResoMakeupGain = 1.f;
+constexpr float kResoMakeupGain = 1.2f;
 constexpr int32_t kResoBufferSize = 2400;
-constexpr float kResoInfiniteFeedbackThreshold = 0.999f;
-constexpr float kResoInfiniteFeedbackLevel = 1.001f;
+constexpr float kResoInfiniteFeedbackThreshold = 0.99f;
+constexpr float kResoInfiniteFeedbackLevel = 1.05f;
 
 constexpr float kEchoFade = 0.05; // 150 ms @ audio rate
 constexpr float kEchoMinLength = 0.01; // 10 ms @ audio rate
@@ -210,6 +210,8 @@ struct PatchCtrls
     float oscDetuneModAmount;
     float oscDetuneCvAmount;
     float oscUseWavetable;
+    // VCV: old saved patches retain the supersaw's original lower octave.
+    bool legacySawPitch = false;
 
     float filterVol;
     float filterMode;

@@ -134,17 +134,30 @@ private:
 
     void SetStart(float value)
     {
-        if (fade_)
-        {
-            return;
-        }
-
         if (value > 0.99f)
         {
             value = 1.f;
         }
 
         uint32_t v = startLUT_.Quantized(value);
+
+        // A speed-dependent crossfade cannot advance while playback is stopped.
+        // Cancel any pending fade and let WriteRead commit the new target.
+        if (PlaybackDirection::PLAYBACK_STALLED == direction_)
+        {
+            fade_ = false;
+            startFade_ = false;
+            newStart_ = v;
+            fadePhase_ = phase_ = 0;
+
+            return;
+        }
+
+        if (fade_)
+        {
+            return;
+        }
+
         if (v != start_)
         {
             newStart_ = v;
@@ -159,17 +172,31 @@ private:
 
     void SetLength(float value)
     {
-        if (fade_)
-        {
-            return;
-        }
-
         if (value > 0.99f)
         {
             value = 1.f;
         }
 
         uint32_t v = lengthLUT_.Quantized(value);
+
+        // A speed-dependent crossfade cannot advance while playback is stopped.
+        // Cancel any pending fade and let WriteRead commit the new target.
+        if (PlaybackDirection::PLAYBACK_STALLED == direction_)
+        {
+            fade_ = false;
+            lengthFade_ = false;
+            newLength_ = v;
+            fadePhase_ = phase_ = 0;
+            fadeThreshold_ = Min(newLength_ * 0.1f, kLooperFadeSamples);
+
+            return;
+        }
+
+        if (fade_)
+        {
+            return;
+        }
+
         if (v != length_)
         {
             newLength_ = v;
@@ -392,6 +419,7 @@ public:
         startFade_ = false;
         boc_ = true;
         cleared_ = false;
+        triggered_ = false;
         fade_ = false;
         triggerFadeIndex_ = 0;
         triggerFadeVolume_ = 0;

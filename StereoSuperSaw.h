@@ -92,11 +92,11 @@ public:
         delete obj;
     }
 
-    void Process(float freq, FloatArray output)
+    void Process(float freq, FloatArray output, bool legacyPitch = false)
     {
         size_t size = output.getSize();
 
-        ParameterInterpolator freqParam(&oldFreq_, freq * 0.5f, size);
+        ParameterInterpolator freqParam(&oldFreq_, legacyPitch ? freq * 0.5f : freq, size);
 
         for (size_t i = 0; i < size; i++)
         {
@@ -170,8 +170,8 @@ public:
         float d = Modulate(patchCtrls_->oscDetune, patchCtrls_->oscDetuneModAmount, patchState_->modValue, patchCtrls_->oscDetuneCvAmount, patchCvs_->oscDetune, -1.f, 1.f, patchState_->modAttenuverters, patchState_->cvAttenuverters);
         SetDetune(d);
 
-        saws_[LEFT_CHANNEL]->Process(f, output.getSamples(LEFT_CHANNEL));
-        saws_[RIGHT_CHANNEL]->Process(f, output.getSamples(RIGHT_CHANNEL));
+        saws_[LEFT_CHANNEL]->Process(f, output.getSamples(LEFT_CHANNEL), patchCtrls_->legacySawPitch);
+        saws_[RIGHT_CHANNEL]->Process(f, output.getSamples(RIGHT_CHANNEL), patchCtrls_->legacySawPitch);
 
         output.multiply(patchCtrls_->osc2Vol * kOScSuperSawGain);
     }
